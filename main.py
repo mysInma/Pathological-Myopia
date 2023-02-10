@@ -7,7 +7,7 @@ import numpy as np
 
 
 
-TRAIN_PATH = './data/Training/PALM-Training400'
+TRAIN_PATH = './tfg/dataset_prueba/'
 
 train_transforms = transforms.Compose([transforms.Resize((224,224)), transforms.ToTensor()])
 train_dataset = torchvision.datasets.ImageFolder(root=TRAIN_PATH, transform=train_transforms)
