@@ -1,0 +1,20 @@
+version: "3.3"
+name: tfg
+services:
+  pytorch:
+    container_name: pytorch
+    build: .
+    runtime: nvidia
+    restart: on-failure
+    ipc: host
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    command: jupyter-lab --allow-root --ip=0.0.0.0 --no-browser --NotebookApp.token=''
+    ports:
+      - 8888:8888
+    volumes:
+      - ./test:/workspace/test
+      - ./data:/workspace/data
+      - ./notebooks:/workspace/notebooks
+
+    
