@@ -24,6 +24,7 @@ class CustomImageDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_labels.iloc[idx, 0]
         #img_path = self.img_labels.iloc[idx, 1]
+        #img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         image = read_image(img_path)
         label = self.img_labels.iloc[idx, 1]
         if self.transform:
@@ -42,7 +43,7 @@ class CustomImageDataset(Dataset):
 if __name__ == "__main__":
     train_transforms = transforms.Compose([transforms.Resize((224,224))])
     
-    train_features = CustomImageDataset("./output.csv","./dataset_prueba/",train_transforms)
+    train_features = CustomImageDataset("./output.csv","./test/",train_transforms)
     
     # print(f"Feature batch shape: {train_features.size()}")
     # img = train_features[0].squeeze()

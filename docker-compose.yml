@@ -4,7 +4,7 @@ services:
   pytorch:
     container_name: pytorch
     build: .
-    runtime: nvidia
+    #runtime: nvidia
     restart: on-failure
     ipc: host
     environment:
