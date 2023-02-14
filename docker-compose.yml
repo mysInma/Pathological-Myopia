@@ -1,10 +1,10 @@
 version: "3.3"
 name: tfg
 services:
-  pytorch:
-    container_name: pytorch
+  dev-pytorch:
+    # container_name: pytorch
     build: .
-    #runtime: nvidia
+    runtime: nvidia
     restart: on-failure
     ipc: host
     environment:

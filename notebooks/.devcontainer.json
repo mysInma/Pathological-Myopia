@@ -1,0 +1,11 @@
+{
+    "name": "dev pytorch",
+    "dockerComposeFile":["../docker-compose.yml"],
+    "service": "dev-pytorch",
+    "shutdownAction": "none",
+    "workspaceFolder": "/workspace/notebooks",
+    "customizations": {
+        "vscode": {"extensions":["ms-python.python","ms-python.isort","ms-toolsai.jupyter"]}
+    }
+    
+}
