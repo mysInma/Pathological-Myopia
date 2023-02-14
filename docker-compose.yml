@@ -2,7 +2,7 @@ version: "3.3"
 name: tfg
 services:
   dev-pytorch:
-    # container_name: pytorch
+    container_name: pytorch
     build: .
     runtime: nvidia
     restart: on-failure

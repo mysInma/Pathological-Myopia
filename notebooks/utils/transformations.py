@@ -13,7 +13,6 @@ class CustomTransformations(Compose):
             transforms.RandomChoice([transforms.RandomHorizontalFlip(),transforms.RandomVerticalFlip()]),
             transforms.RandomRotation(degrees=30),
             transforms.RandomGrayscale(p=0.2),
-            transforms.ToTensor(),
             transforms.Normalize(self.mean, self.std)
         ])
         
