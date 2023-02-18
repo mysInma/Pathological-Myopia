@@ -24,7 +24,7 @@ class CustomImageDataset(Dataset):
         label = self.df.loc[idx, "label"]
         label = torch.tensor(label)
         label = F.one_hot(label, num_classes = 3)
-        image = read_image(img_path)
+        image = read_image(img_path).float()
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
