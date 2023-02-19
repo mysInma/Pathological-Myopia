@@ -18,7 +18,7 @@ class CustomImageDataset(Dataset):
         self.num_clases=num_clases
 
     def __len__(self):
-        return len(glob(os.path.join(self.img_dir, "*.jpg")))
+        return self.df.shape[0]
 
     def __getitem__(self, idx):
         img_path = self.df.loc[idx, "imgPath"]
@@ -39,11 +39,11 @@ class CustomImageDataset(Dataset):
 #     return drop_enc
     
     
-if __name__ == "__main__":
-    train_transforms = transforms.Compose([transforms.Resize((224,224))])
-    train_features = CustomImageDataset("./output.csv","../test/",train_transforms)
-    dl = DataLoader(train_features,batch_size=2,shuffle=True)
-    for image, label in dl:
-        print(image.shape)
-        print(label)
-        break
+# if __name__ == "__main__":
+#     train_transforms = transforms.Compose([transforms.Resize((224,224))])
+#     train_features = CustomImageDataset("./output.csv","../test/",train_transforms)
+#     dl = DataLoader(train_features,batch_size=2,shuffle=True)
+#     for image, label in dl:
+#         print(image.shape)
+#         print(label)
+#         break

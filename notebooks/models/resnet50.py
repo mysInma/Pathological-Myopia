@@ -48,6 +48,7 @@ class MyopiaClasificationModel(pl.LightningModule):
         loss = F.cross_entropy(yhat,y)
         # Logging to TensorBoard (if installed) by default
         self.log("train_loss", loss)
+        self.log("paquito",loss)
         return loss
 
     def configure_optimizers(self):
