@@ -1,9 +1,7 @@
 index,imgPath,label
-0,../../test/P0001.jpg,2
-1,../../test/P0212.jpg,2
-2,../../test/P0002.jpg,2
-3,../../test/H0001.jpg,0
-4,../../test/N0001.jpg,1
-5,../../test/H0007.jpg,0
-6,../../test/N0002.jpg,1
-7,../../test/H0002.jpg,0
+0,../test/H0001.jpg,0
+3,../test/N0001.jpg,1
+4,../test/N0002.jpg,1
+5,../test/P0001.jpg,2
+6,../test/P0002.jpg,2
+7,../test/P0212.jpg,2
