@@ -160,3 +160,4 @@ cython_debug/
 #.idea
 data/*
 *.pth
+notebooks/models/lightning_logs

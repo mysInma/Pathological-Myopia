@@ -15,6 +15,7 @@ class CustomImageDataset(Dataset):
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
+        self.num_clases=num_clases
 
     def __len__(self):
         return len(glob(os.path.join(self.img_dir, "*.jpg")))
@@ -23,7 +24,7 @@ class CustomImageDataset(Dataset):
         img_path = self.df.loc[idx, "imgPath"]
         label = self.df.loc[idx, "label"]
         label = torch.tensor(label)
-        label = F.one_hot(label, num_classes = 3)
+        label = F.one_hot(label, self.num_clases).float()
         image = read_image(img_path).float()
         if self.transform:
             image = self.transform(image)
