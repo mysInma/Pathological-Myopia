@@ -6,6 +6,7 @@ from torch.nn import functional as F
 import pytorch_lightning as pl
 from torchvision.models import resnet50, ResNet50_Weights
 from torchmetrics.functional import accuracy, auroc 
+from torchmetrics import Accuracy
 import torchmetrics
 import torch
 
@@ -38,6 +39,7 @@ class MyopiaClasificationModel(pl.LightningModule):
     def __init__(self, img_size):
         super().__init__()
         self.model = ResNet50TF(img_size=img_size,num_classes=3)
+        self.accuracy = Accuracy(task="multiclass", num_classes=3)
        
         
     def forward(self, x):
@@ -50,7 +52,7 @@ class MyopiaClasificationModel(pl.LightningModule):
         logits = self(x)
         yhat = F.softmax(logits,dim=1)
         loss = F.cross_entropy(yhat,y)
-        acc = accuracy(yhat, y, num_classes=3, task='multiclass')
+        acc = self.accuracy(yhat, torch.argmax(y,dim=1))
         #auroc = torchmetrics.functional.auroc(yhat, y, num_classes=3, task='multiclass')
         
         # Logging to TensorBoard (if installed) by default
@@ -72,11 +74,16 @@ class MyopiaClasificationModel(pl.LightningModule):
         avg_loss = torch.stack(losses).mean()
         train_acc = torch.stack(accs).mean()
         #train_auroc = torch.stack(aurocs).mean()
+
+        
         
         
         self.log("train_loss_ephoc", avg_loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("train_acc_ephoc", train_acc, on_epoch=True, prog_bar=True, logger=True)
+        self.log("step",self.current_epoch)
         #self.log("train_auroc_ephoc", train_auroc, on_epoch=True, prog_bar=True, logger=True)
+        
+
         
     
 
