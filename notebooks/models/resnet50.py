@@ -5,6 +5,9 @@ from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
 from torchvision.models import resnet50, ResNet50_Weights
+from torchmetrics.functional import accuracy, auroc 
+import torchmetrics
+import torch
 
 
 class ResNet50TF(nn.Module):
@@ -35,6 +38,7 @@ class MyopiaClasificationModel(pl.LightningModule):
     def __init__(self, img_size):
         super().__init__()
         self.model = ResNet50TF(img_size=img_size,num_classes=3)
+       
         
     def forward(self, x):
         return self.model(x)
@@ -46,10 +50,35 @@ class MyopiaClasificationModel(pl.LightningModule):
         logits = self(x)
         yhat = F.softmax(logits,dim=1)
         loss = F.cross_entropy(yhat,y)
+        acc = accuracy(yhat, y, num_classes=3, task='multiclass')
+        #auroc = torchmetrics.functional.auroc(yhat, y, num_classes=3, task='multiclass')
+        
         # Logging to TensorBoard (if installed) by default
         self.log("train_loss", loss)
-        self.log("paquito",loss)
-        return loss
+        self.log("train_acc", acc)
+        #self.log("train_auroc", auroc)
+    
+        
+        return {"loss": loss, "acc": acc}
+        #return {"loss": loss, "acc": acc, "auroc":auroc}
+    
+    
+
+    def training_epoch_end(self, training_step_outputs):
+        losses = [x["loss"] for x in training_step_outputs]
+        accs =  [x["acc"] for x in training_step_outputs]
+        #aurocs =  [x["auroc"] for x in training_step_outputs]
+        
+        avg_loss = torch.stack(losses).mean()
+        train_acc = torch.stack(accs).mean()
+        #train_auroc = torch.stack(aurocs).mean()
+        
+        
+        self.log("train_loss_ephoc", avg_loss, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_acc_ephoc", train_acc, on_epoch=True, prog_bar=True, logger=True)
+        #self.log("train_auroc_ephoc", train_auroc, on_epoch=True, prog_bar=True, logger=True)
+        
+    
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
