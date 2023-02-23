@@ -7,6 +7,8 @@ import pytorch_lightning as pl
 from torchvision.models import resnet50, ResNet50_Weights
 from torchmetrics import Accuracy   
 from torchmetrics.classification import MulticlassAUROC, MulticlassRecall
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 
 
@@ -35,12 +37,13 @@ class ResNet50TF(nn.Module):
 
 # define the LightningModule
 class MyopiaClasificationModel(pl.LightningModule):
-    def __init__(self, img_size):
+    def __init__(self, config):
         super().__init__()
-        self.model = ResNet50TF(img_size=img_size,num_classes=3)
-        self.accuracy = Accuracy(task="multiclass", num_classes=3)
-        self.auc = MulticlassAUROC(num_classes=3)
-        self.recall = MulticlassRecall(num_classes=3, average="macro")
+        self.save_hyperparameters(config)
+        self.model = ResNet50TF(img_size=self.hparams.img_size,num_classes=self.hparams.num_classes)
+        self.accuracy = Accuracy(task="multiclass", num_classes=self.hparams.num_classes)
+        self.auc = MulticlassAUROC(num_classes=self.hparams.num_classes)
+        self.recall = MulticlassRecall(num_classes=self.hparams.num_classes, average="macro")
        
         
     def forward(self, x):
@@ -86,15 +89,35 @@ class MyopiaClasificationModel(pl.LightningModule):
     #     self.log("train_recall_epoch",train_recall,on_epoch=True,on_step=False)
         self.log("step",self.current_epoch)
         
-
-        
+    def validation_step(self, batch, batch_idx):
+        x,y = batch
+        x, y = batch
+        logits = self(x)
+        yhat = F.softmax(logits,dim=1)
+        loss = F.cross_entropy(logits,y)
+        self.log("train_val_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_val_acc", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_val_recall",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
-
+        return loss
+    
+    def test_step(self,batch,batch_idx):
+        x,y = batch
+        x, y = batch
+        logits = self(x)
+        yhat = F.softmax(logits,dim=1)
+        loss = F.cross_entropy(logits,y)
+        self.log("train_test_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_test_acc", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_test_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
+    
+        return loss
+    
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
         return optimizer
-    
-img_size=512
     
 if __name__ == '__main__':
     import sys
@@ -107,18 +130,39 @@ if __name__ == '__main__':
     from torchmetrics.functional import accuracy, auroc
     import torch
     from torch.utils.data import DataLoader
-    train_features = CustomImageDataset("../train.csv","../../test/",transform=CustomTransformations(img_size))
-    train_loader = DataLoader(train_features,batch_size=3,num_workers=3,shuffle=True)
+    
+    config = {
+        "batch_size":3,
+        "img_size":512,
+        "num_workers":3,
+        "num_classes":3,
+        "lr":1e-3
+    }
+    
+    
+    pl.seed_everything(42,workers=True)
+    train_features = CustomImageDataset("../train.csv","../../test/",transform=CustomTransformations(config["img_size"]))
+    train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
 
-    # Initialize a trainer
+    # Initialize a traine r
     trainer = Trainer(
+        accumulate_grad_batches=3, # acumula los gradientes de los primeros 4 batches
+        deterministic=True,
         accelerator="auto",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=10,
-        callbacks=[TQDMProgressBar()],
-        log_every_n_steps=4,
-        enable_checkpointing=False
+        callbacks=[TQDMProgressBar(),
+                   EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
+                   ModelCheckpoint(dirpath="./model-checkpoint/",\
+                    filename="{epoch}-{train_val_acc:.2f}",
+                    save_top_k=2)],
+        log_every_n_steps=1,
+        # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
+    
+    val_loader = train_loader
+    test_loader = train_loader
 
-    miopia_model = MyopiaClasificationModel(img_size)
-    trainer.fit(miopia_model, train_loader)
+    miopia_model = MyopiaClasificationModel(config)
+    trainer.fit(miopia_model, train_loader,val_loader)
+    trainer.test(miopia_model,test_loader)
