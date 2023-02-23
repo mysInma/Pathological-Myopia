@@ -12,6 +12,7 @@ services:
     command: jupyter-lab --allow-root --ip=0.0.0.0 --no-browser --NotebookApp.token=''
     ports:
       - 8888:8888
+      - 6006:6006
     volumes:
       - ./test:/workspace/test
       - ./data:/workspace/data

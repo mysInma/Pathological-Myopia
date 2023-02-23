@@ -5,9 +5,8 @@ from torch import optim, nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
 from torchvision.models import resnet50, ResNet50_Weights
-from torchmetrics.functional import accuracy, auroc 
-from torchmetrics import Accuracy
-import torchmetrics
+from torchmetrics import Accuracy   
+from torchmetrics.classification import MulticlassAUROC, MulticlassRecall
 import torch
 
 
@@ -40,6 +39,8 @@ class MyopiaClasificationModel(pl.LightningModule):
         super().__init__()
         self.model = ResNet50TF(img_size=img_size,num_classes=3)
         self.accuracy = Accuracy(task="multiclass", num_classes=3)
+        self.auc = MulticlassAUROC(num_classes=3)
+        self.recall = MulticlassRecall(num_classes=3, average="macro")
        
         
     def forward(self, x):
@@ -51,37 +52,39 @@ class MyopiaClasificationModel(pl.LightningModule):
         x, y = batch
         logits = self(x)
         yhat = F.softmax(logits,dim=1)
-        loss = F.cross_entropy(yhat,y)
-        acc = self.accuracy(yhat, torch.argmax(y,dim=1))
-        #auroc = torchmetrics.functional.auroc(yhat, y, num_classes=3, task='multiclass')
+        loss = F.cross_entropy(logits,y)
+        acc = self.auc(yhat, y)
+        recall = self.recall(torch.argmax(yhat,dim=1),y)
+        auc = self.auc(yhat, y)
         
         # Logging to TensorBoard (if installed) by default
-        self.log("train_loss", loss)
-        self.log("train_acc", acc)
-        #self.log("train_auroc", auroc)
+        self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
-        
-        return {"loss": loss, "acc": acc}
-        #return {"loss": loss, "acc": acc, "auroc":auroc}
+        return loss
+        # return {"loss": loss, "acc": acc}
+        # return {"loss": loss, "acc": acc, "auroc":auc, "recall":recall}
     
     
 
     def training_epoch_end(self, training_step_outputs):
-        losses = [x["loss"] for x in training_step_outputs]
-        accs =  [x["acc"] for x in training_step_outputs]
-        #aurocs =  [x["auroc"] for x in training_step_outputs]
+    #     losses = [x["loss"] for x in training_step_outputs]
+    #     accs =  [x["acc"] for x in training_step_outputs]
+    #     aurocs =  [x["auroc"] for x in training_step_outputs]
+    #     recalls = [x["recall"] for x in training_step_outputs]
         
-        avg_loss = torch.stack(losses).mean()
-        train_acc = torch.stack(accs).mean()
-        #train_auroc = torch.stack(aurocs).mean()
-
+    #     avg_loss = torch.stack(losses).mean()
+    #     train_acc = torch.stack(accs).mean()
+    #     train_auroc = torch.stack(aurocs).mean()
+    #     train_recall = torch.stack(recalls).mean()
         
-        
-        
-        self.log("train_loss_ephoc", avg_loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("train_acc_ephoc", train_acc, on_epoch=True, prog_bar=True, logger=True)
+    #     self.log("train_loss_ephoc", avg_loss, on_epoch=True, prog_bar=True, logger=True)
+    #     self.log("train_acc_ephoc", train_acc, on_epoch=True, prog_bar=True, logger=True)
+    #     self.log("train_auroc_ephoc", train_auroc, on_epoch=True, prog_bar=True, logger=True)
+    #     self.log("train_recall_epoch",train_recall,on_epoch=True,on_step=False)
         self.log("step",self.current_epoch)
-        #self.log("train_auroc_ephoc", train_auroc, on_epoch=True, prog_bar=True, logger=True)
         
 
         
@@ -90,3 +93,32 @@ class MyopiaClasificationModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
+    
+img_size=512
+    
+if __name__ == '__main__':
+    import sys
+    sys.path.insert(0,"../")
+    from utils.dataloader import CustomImageDataset
+    from utils.transformations import CustomTransformations
+    from models.resnet50 import MyopiaClasificationModel
+    from pytorch_lightning import Trainer
+    from pytorch_lightning.callbacks.progress import TQDMProgressBar
+    from torchmetrics.functional import accuracy, auroc
+    import torch
+    from torch.utils.data import DataLoader
+    train_features = CustomImageDataset("../train.csv","../../test/",transform=CustomTransformations(img_size))
+    train_loader = DataLoader(train_features,batch_size=3,num_workers=3,shuffle=True)
+
+    # Initialize a trainer
+    trainer = Trainer(
+        accelerator="auto",
+        devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
+        max_epochs=10,
+        callbacks=[TQDMProgressBar()],
+        log_every_n_steps=4,
+        enable_checkpointing=False
+    )
+
+    miopia_model = MyopiaClasificationModel(img_size)
+    trainer.fit(miopia_model, train_loader)
