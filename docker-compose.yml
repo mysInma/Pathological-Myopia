@@ -17,5 +17,14 @@ services:
       - ./test:/workspace/test
       - ./data:/workspace/data
       - ./notebooks:/workspace/notebooks
+  fastapi:
+    build:
+      context: ./api
+    volumes:
+      - ./:/workspace/fast-api
+    ports:
+      - 8001:8000
+
+
 
     
