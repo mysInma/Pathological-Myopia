@@ -1,7 +1,7 @@
 from unittest import mock
 import sys
-sys.path.insert(1,"/workspace/fast-api")
 import os
+sys.path.append(os.path.abspath(os.path.join('.', '.')))
 from app.main import app, inference_toy_model
 from fastapi.testclient import TestClient
 import pytest

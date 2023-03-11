@@ -28,7 +28,7 @@ async def root():
 
 # ojo jpg no soporta RGBA pero png si
 @app.post("/toy")
-async def toy_model(file: UploadFile,background_tasks: BackgroundTasks ):
+async def toy_model(file: UploadFile = File(...),background_tasks: BackgroundTasks = None ):
     content = await file.read()
     img = Image.open(BytesIO(content))
     final_img = inference_toy_model(img)
