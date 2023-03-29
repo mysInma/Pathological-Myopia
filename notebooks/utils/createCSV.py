@@ -52,5 +52,5 @@ def encodingLabel(label):
     else:
         return 2
     
-if __name__ == '__main__':
-    createCSV("../../test","../output.csv")
+#if __name__ == '__main__':
+    #createCSV("../../test","../output.csv")

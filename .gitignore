@@ -162,3 +162,10 @@ data/*
 *.pth
 notebooks/models/lightning_logs
 *.onnx
+
+data/*
+*.pth
+notebooks/models/model-checkpoint
+*.onnx
+
+
