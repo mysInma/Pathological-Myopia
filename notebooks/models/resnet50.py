@@ -122,7 +122,7 @@ class MyopiaClasificationModel(pl.LightningModule):
 if __name__ == '__main__':
     import sys
     sys.path.insert(0,"../")
-    from utils.dataloader import CustomImageDataset
+    from utils.dataloader import ResnetDataset
     from utils.transformations import CustomTransformations
     from models.resnet50 import MyopiaClasificationModel
     from pytorch_lightning import Trainer
@@ -141,21 +141,22 @@ if __name__ == '__main__':
     
     
     pl.seed_everything(42,workers=True)
-    train_features = CustomImageDataset("../train.csv","../../test/",transform=CustomTransformations(config["img_size"]))
+    train_features = ResnetDataset("../train.csv","../../test/",transform=CustomTransformations(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
 
     # Initialize a traine r
     trainer = Trainer(
         accumulate_grad_batches=3, # acumula los gradientes de los primeros 4 batches
-        deterministic=True,
+        # deterministic=True,
         accelerator="auto",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=10,
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
                    ModelCheckpoint(dirpath="./model-checkpoint/",\
-                    filename="{epoch}-{train_val_acc:.2f}",
-                    save_top_k=2)],
+                    filename="resnet50-{epoch}-{train_val_acc:.2f}",
+                    save_top_k=2,
+                    monitor="train_val_loss")],
         log_every_n_steps=1,
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )

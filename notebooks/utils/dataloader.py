@@ -9,7 +9,7 @@ from glob import glob
 import pandas as pd
 import torch.nn.functional as F
 
-class CustomImageDataset(Dataset):
+class ResnetDataset(Dataset):
     def __init__(self, annotations_file,img_dir , num_clases=3 ,transform=None, target_transform=None):
         self.df = pd.read_csv(annotations_file)
         self.img_dir = img_dir
@@ -32,6 +32,26 @@ class CustomImageDataset(Dataset):
             label = self.target_transform(label)
         return image, label
     
+class UNETDataset(Dataset):
+    def __init__(self, annotations_file,transform=None, target_transform=None):
+      self.df = pd.read_csv(annotations_file) 
+      self.transform = transform
+      self.target_transform = target_transform
+    
+    def __len__(self):
+        return self.df.shape[0]
+    
+    def __getitem__(self, idx):
+        img_path = self.df.loc[idx, "imgPath"]
+        mask_path = self.df.loc[idx, "maskPath"]
+        
+        image = read_image(img_path).float()
+        label = read_image(mask_path).float()
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
 # def one_hot_encode(data):
 #     drop_enc = OneHotEncoder(drop='first').fit(data)
 #     drop_enc.categories_
@@ -41,7 +61,7 @@ class CustomImageDataset(Dataset):
     
 # if __name__ == "__main__":
 #     train_transforms = transforms.Compose([transforms.Resize((224,224))])
-#     train_features = CustomImageDataset("./output.csv","../test/",train_transforms)
+#     train_features = ResnetDataset("./output.csv","../test/",train_transforms)
 #     dl = DataLoader(train_features,batch_size=2,shuffle=True)
 #     for image, label in dl:
 #         print(image.shape)
