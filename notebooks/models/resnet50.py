@@ -102,6 +102,9 @@ class MyopiaClasificationModel(pl.LightningModule):
     
         return loss
     
+    def validation_epoch_end(self, validation_step_outputs):
+        self.log("step",self.current_epoch)
+    
     def test_step(self,batch,batch_idx):
         x,y = batch
         x, y = batch
@@ -143,6 +146,9 @@ if __name__ == '__main__':
     pl.seed_everything(42,workers=True)
     train_features = ResnetDataset("../train_resnet50/train_resnet50.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
+    
+    val_dataset = ResnetDataset("../train_resnet50/val_resnet50.csv","../../train_resnet50/",transform=None)
+    val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
     trainer = Trainer(
@@ -160,8 +166,6 @@ if __name__ == '__main__':
         log_every_n_steps=1,
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
-    
-    val_loader = train_loader
     #test_loader = train_loader
 
     miopia_model = MyopiaClasificationModel(config)
