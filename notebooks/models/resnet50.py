@@ -55,15 +55,8 @@ class MyopiaClasificationModel(pl.LightningModule):
         x, y = batch
         logits = self(x)
         
-        if self.hparams.num_classes > 2:
-            yhat = F.softmax(logits,dim=1)
-            loss = F.cross_entropy(logits,y)
-            
-        else :
-            yhat = F.sigmoid(logits,dim=1)
-            loss = F.binary_cross_entropy(yhat,y)
-        
-        
+        yhat = F.softmax(logits,dim=1)
+        loss = F.cross_entropy(logits,y)    
         
         # l1 penalization applied
         indices = torch.where(y == 0)
@@ -110,7 +103,6 @@ class MyopiaClasificationModel(pl.LightningModule):
         x,y = batch
         x, y = batch
         logits = self(x)
-        #TO-DO PONER LO DE LAS CLASES
         yhat = F.softmax(logits,dim=1)
         loss = F.cross_entropy(logits,y)
         
@@ -162,7 +154,7 @@ if __name__ == '__main__':
         "batch_size":4,
         "img_size":512,
         "num_workers":4,
-        "num_classes":3,
+        "num_classes":2,
         "lr":1e-3,
         "l1_lambda":1e-5
     }
@@ -185,7 +177,7 @@ if __name__ == '__main__':
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
                    ModelCheckpoint(dirpath="./model-checkpoint/",\
-                    filename="resnet50-{epoch}-{train_val_acc:.2f}",
+                    filename="resnet50H-{epoch}-{train_val_acc:.2f}",
                     save_top_k=2,
                     monitor="train_val_loss")],
         log_every_n_steps=1,
