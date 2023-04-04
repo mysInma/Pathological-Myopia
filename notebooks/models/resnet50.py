@@ -54,8 +54,25 @@ class MyopiaClasificationModel(pl.LightningModule):
         # it is independent of forward
         x, y = batch
         logits = self(x)
-        yhat = F.softmax(logits,dim=1)
-        loss = F.cross_entropy(logits,y)
+        
+        if self.hparams.num_classes > 2:
+            yhat = F.softmax(logits,dim=1)
+            loss = F.cross_entropy(logits,y)
+            
+        else :
+            yhat = F.sigmoid(logits,dim=1)
+            loss = F.binary_cross_entropy(yhat,y)
+        
+        
+        
+        # l1 penalization applied
+        indices = torch.where(y == 0)
+        if torch.any(torch.argmax(yhat,dim=1)[indices]>0):
+            penalty = self.hparams.l1_lambda * sum(p.abs().sum() for p in self.model.parameters())
+            loss = loss + penalty
+        
+        
+            
         acc = self.auc(yhat, y)
         recall = self.recall(torch.argmax(yhat,dim=1),y)
         auc = self.auc(yhat, y)
@@ -93,8 +110,15 @@ class MyopiaClasificationModel(pl.LightningModule):
         x,y = batch
         x, y = batch
         logits = self(x)
+        #TO-DO PONER LO DE LAS CLASES
         yhat = F.softmax(logits,dim=1)
         loss = F.cross_entropy(logits,y)
+        
+        indices = torch.where(y == 0)
+        if torch.any(torch.argmax(yhat,dim=1)[indices]>0):
+            penalty = self.hparams.l1_lambda * sum(p.abs().sum() for p in self.model.parameters())
+            loss = loss + penalty
+        
         self.log("train_val_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_val_acc", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
@@ -135,19 +159,20 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     
     config = {
-        "batch_size":1,
-        "img_size":1024,
-        "num_workers":2,
+        "batch_size":4,
+        "img_size":512,
+        "num_workers":4,
         "num_classes":3,
-        "lr":1e-3
+        "lr":1e-3,
+        "l1_lambda":1e-5
     }
     
     
     pl.seed_everything(42,workers=True)
-    train_features = ResnetDataset("../train_resnet50/train_resnet50.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
+    train_features = ResnetDataset("../train_resnet50/resnet_train.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = ResnetDataset("../train_resnet50/val_resnet50.csv","../../train_resnet50/",transform=None)
+    val_dataset = ResnetDataset("../train_resnet50/resnet_val.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer

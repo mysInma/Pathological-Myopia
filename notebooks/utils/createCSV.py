@@ -107,9 +107,9 @@ def createTrainValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_v
     
     
 def encodingLabel(label):
-    if "H" in label:
+    if "N" in label:
         return 0
-    elif "N" in label:
+    elif "P" in label:
         return 1
     else:
         return 2
