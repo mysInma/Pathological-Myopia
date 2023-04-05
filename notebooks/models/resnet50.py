@@ -59,8 +59,8 @@ class MyopiaClasificationModel(pl.LightningModule):
         loss = F.cross_entropy(logits,y)    
         
         # l1 penalization applied
-        indices = torch.where(y == 0)
-        if torch.any(torch.argmax(yhat,dim=1)[indices]>0):
+        indices = torch.where(y == 2) #y==0
+        if torch.any(torch.argmax(yhat,dim=1)[indices]>2): #<0
             penalty = self.hparams.l1_lambda * sum(p.abs().sum() for p in self.model.parameters())
             loss = loss + penalty
         
@@ -106,8 +106,8 @@ class MyopiaClasificationModel(pl.LightningModule):
         yhat = F.softmax(logits,dim=1)
         loss = F.cross_entropy(logits,y)
         
-        indices = torch.where(y == 0)
-        if torch.any(torch.argmax(yhat,dim=1)[indices]>0):
+        indices = torch.where(y == 2)
+        if torch.any(torch.argmax(yhat,dim=1)[indices]<2):
             penalty = self.hparams.l1_lambda * sum(p.abs().sum() for p in self.model.parameters())
             loss = loss + penalty
         
@@ -154,7 +154,7 @@ if __name__ == '__main__':
         "batch_size":4,
         "img_size":512,
         "num_workers":4,
-        "num_classes":2,
+        "num_classes":3,
         "lr":1e-3,
         "l1_lambda":1e-5
     }
@@ -176,7 +176,7 @@ if __name__ == '__main__':
         max_epochs=1000,
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                   ModelCheckpoint(dirpath="./model-checkpoint/",\
+                   ModelCheckpoint(dirpath="./new-model-checkpoint/",\
                     filename="resnet50H-{epoch}-{train_val_acc:.2f}",
                     save_top_k=2,
                     monitor="train_val_loss")],
