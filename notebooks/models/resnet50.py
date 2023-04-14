@@ -54,8 +54,18 @@ class MyopiaClasificationModel(pl.LightningModule):
         # it is independent of forward
         x, y = batch
         logits = self(x)
+        
         yhat = F.softmax(logits,dim=1)
-        loss = F.cross_entropy(logits,y)
+        loss = F.cross_entropy(logits,y)    
+        
+        # l1 penalization applied
+        indices = torch.where(y == 2) #y==0
+        if torch.any(torch.argmax(yhat,dim=1)[indices]>2): #<0
+            penalty = self.hparams.l1_lambda * sum(p.abs().sum() for p in self.model.parameters())
+            loss = loss + penalty
+        
+        
+            
         acc = self.auc(yhat, y)
         recall = self.recall(torch.argmax(yhat,dim=1),y)
         auc = self.auc(yhat, y)
@@ -95,12 +105,21 @@ class MyopiaClasificationModel(pl.LightningModule):
         logits = self(x)
         yhat = F.softmax(logits,dim=1)
         loss = F.cross_entropy(logits,y)
+        
+        indices = torch.where(y == 2)
+        if torch.any(torch.argmax(yhat,dim=1)[indices]<2):
+            penalty = self.hparams.l1_lambda * sum(p.abs().sum() for p in self.model.parameters())
+            loss = loss + penalty
+        
         self.log("train_val_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_val_acc", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_val_recall",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
         return loss
+    
+    def validation_epoch_end(self, validation_step_outputs):
+        self.log("step",self.current_epoch)
     
     def test_step(self,batch,batch_idx):
         x,y = batch
@@ -122,7 +141,7 @@ class MyopiaClasificationModel(pl.LightningModule):
 if __name__ == '__main__':
     import sys
     sys.path.insert(0,"../")
-    from utils.dataloader import CustomImageDataset
+    from utils.dataloader import ResnetDataset
     from utils.transformations import CustomTransformations
     from models.resnet50 import MyopiaClasificationModel
     from pytorch_lightning import Trainer
@@ -132,37 +151,40 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     
     config = {
-        "batch_size":3,
+        "batch_size":4,
         "img_size":512,
-        "num_workers":3,
+        "num_workers":4,
         "num_classes":3,
-        "lr":1e-3
+        "lr":1e-3,
+        "l1_lambda":1e-5
     }
     
     
     pl.seed_everything(42,workers=True)
-    train_features = CustomImageDataset("../train.csv","../../test/",transform=CustomTransformations(config["img_size"]))
+    train_features = ResnetDataset("../train_resnet50/resnet_train.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
+    
+    val_dataset = ResnetDataset("../train_resnet50/resnet_val.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
+    val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
-    # Initialize a traine r
+    # Initialize a trainer
     trainer = Trainer(
-        accumulate_grad_batches=3, # acumula los gradientes de los primeros 4 batches
-        deterministic=True,
+        accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
+        #deterministic=True,
         accelerator="auto",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
-        max_epochs=10,
+        max_epochs=1000,
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                   ModelCheckpoint(dirpath="./model-checkpoint/",\
-                    filename="{epoch}-{train_val_acc:.2f}",
-                    save_top_k=2)],
+                   ModelCheckpoint(dirpath="./new-model-checkpoint/",\
+                    filename="resnet50H-{epoch}-{train_val_acc:.2f}",
+                    save_top_k=2,
+                    monitor="train_val_loss")],
         log_every_n_steps=1,
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
-    
-    val_loader = train_loader
-    test_loader = train_loader
+    #test_loader = train_loader
 
     miopia_model = MyopiaClasificationModel(config)
     trainer.fit(miopia_model, train_loader,val_loader)
-    trainer.test(miopia_model,test_loader)
+    #trainer.test(miopia_model,test_loader)

@@ -53,3 +53,9 @@ The current repository uses docker compose to forget about dependencies. In orde
 ```
 docker-compose up -d --no-deps --build <service_name>
 ```
+
+### Tensorboard Execution
+
+```
+tensorboard --logdir /path/to/pytorch_lightings/logs --port 6000
+```
