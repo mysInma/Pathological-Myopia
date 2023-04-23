@@ -144,8 +144,119 @@ class ResUNET(nn.Module):
         x = self.convBlock(64,1,x)
 
         return x
+     
+# define the LightningModule
+class SegmentationModel(pl.LightningModule):
+    def __init__(self, config):
+        super().__init__()
+        self.save_hyperparameters(config)
+        self.model = ResUNET(img_size=self.hparams.img_size)
+        self.accuracy = Accuracy()
+        # self.auc = MulticlassAUROC(num_classes=self.hparams.num_classes)
+        # self.recall = MulticlassRecall(num_classes=self.hparams.num_classes, average="macro") 
+        
+    def forward(self, x):
+        return self.model(x)
+    
+    def training_step(self, batch, batch_idx):
+      x, y = batch
+      x = x.to(self.device)
+      y = y.to(self.device)
+      logits = self(x)
+      loss = F.cross_entropy(logits, y)
+         
+      
+      self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_acc_step", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+
+      return loss
+    
+    def training_epoch_end(self, training_step_outputs):
+        self.log("step",self.current_epoch)
+        
+        
+    def validation_step(self, batch, batch_idx):
+      x,y = batch
+      x = x.to(self.device)
+      y = y.to(self.device)
+      logits = self(x)
+      loss = F.cross_entropy(logits,y)
+        
+      self.log("train_val_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+
+      return loss
+  
+    def validation_epoch_end(self, validation_step_outputs):
+      self.log("step",self.current_epoch)
+  
+      
+    def test_step(self,batch,batch_idx):
+      x,y = batch
+      x = x.to(self.device)
+      y = y.to(self.device)
+      logits = self(x)
+      loss = F.cross_entropy(logits,y)
+      self.log("train_test_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_test_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+
+      return loss
+      
+    def configure_optimizers(self):
+      optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
+      return optimizer
+  
 if __name__ == '__main__':
-    model = ResUNET(1024)
-    with torch.no_grad():
-        for i in range(5):
-          model(torch.rand(1,3,1024,1024))
+    # model = ResUNET(1024)
+    # with torch.no_grad():
+    #     for i in range(5):
+    #       model(torch.rand(1,3,1024,1024))
+    
+    
+    
+    import sys
+    sys.path.insert(0,"../")
+    from utils.dataloader import UNETDataset
+    from utils.transformations import CustomTransformationResUnet
+    from models.resunet import ResUNET
+    from pytorch_lightning import Trainer
+    from pytorch_lightning.callbacks.progress import TQDMProgressBar
+    from torchmetrics.functional import accuracy
+    import torch
+    from torch.utils.data import DataLoader
+    
+    config = {
+        "batch_size":4,
+        "img_size":512,
+        "num_workers":4,
+        "lr":1e-3,
+    }
+    
+    
+    pl.seed_everything(42,workers=True)
+    train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
+    train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
+    
+    val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
+    val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
+
+    # Initialize a trainer
+    trainer = Trainer(
+        accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
+        #deterministic=True,
+        accelerator="auto",
+        devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
+        max_epochs=1000,
+        callbacks=[TQDMProgressBar(),
+                   EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
+                   ModelCheckpoint(dirpath="./model-checkpoint-resUNET/",\
+                    filename="resnet50H-{epoch}-{train_val_acc:.2f}",
+                    save_top_k=2,
+                    monitor="train_val_loss")],
+        log_every_n_steps=1,
+        # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
+    )
+    #test_loader = train_loader
+
+    miopia_model = SegmentationModel(config)
+    trainer.fit(miopia_model, train_loader,val_loader)

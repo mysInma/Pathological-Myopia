@@ -1,7 +1,7 @@
 import torch
 from  torchvision import transforms
 import cv2
-from albumentations import HorizontalFlip, VerticalFlip, Rotate, Compose, Resize
+from albumentations import HorizontalFlip, VerticalFlip, Rotate, Compose, Resize, Normalize
 from albumentations.pytorch.transforms import ToTensor
 
 class CustomTransformations():
@@ -26,7 +26,7 @@ class CustomTransformations():
 
 class CustomTransformationResUnet():
     def __init__(self, size):
-        self.transformations = Compose([Resize(size,size),HorizontalFlip(p=0.4),VerticalFlip(p=0.4),Rotate(p=0.2),ToTensor()])
+        self.transformations = Compose([Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), Resize(size,size),HorizontalFlip(p=0.4),VerticalFlip(p=0.4),Rotate(p=0.2),ToTensor()])
         
     def __call__(self, image_path, mask_path):
         
