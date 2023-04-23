@@ -54,7 +54,7 @@ def unetCSV(dir_path:str, mask_path:str, json_path:str, output_path:str):
     if not os.path.exists(os.path.exists(mask_path)):
         raise Exception(f"{mask_path} is not a correct path")
     
-    if not os.path.exists(os.path.isfile(json_path)):
+    if json_path and  (not os.path.exists(os.path.isfile(json_path))):
         raise Exception(f"{json_path} is not a correct path")
     
     df = pd.DataFrame(columns=["imgPath","maskPath"])

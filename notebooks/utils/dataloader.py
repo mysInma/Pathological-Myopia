@@ -45,13 +45,9 @@ class UNETDataset(Dataset):
         img_path = self.df.loc[idx, "imgPath"]
         mask_path = self.df.loc[idx, "maskPath"]
         
-        image = read_image(img_path).float()
-        label = read_image(mask_path).float()
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
-        return image, label
+        image,mask = self.transform(img_path,mask_path)
+        
+        return image, mask
 # def one_hot_encode(data):
 #     drop_enc = OneHotEncoder(drop='first').fit(data)
 #     drop_enc.categories_
