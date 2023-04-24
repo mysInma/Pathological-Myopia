@@ -8,7 +8,7 @@ from torchmetrics import Accuracy
 import math 
 
 
-from torchmetrics.classification import MulticlassAUROC, MulticlassRecall
+from torchmetrics.classification import Recall, AUROC
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
@@ -152,8 +152,8 @@ class SegmentationModel(pl.LightningModule):
         self.save_hyperparameters(config)
         self.model = ResUNET(img_size=self.hparams.img_size)
         self.accuracy = Accuracy()
-        # self.auc = MulticlassAUROC(num_classes=self.hparams.num_classes)
-        # self.recall = MulticlassRecall(num_classes=self.hparams.num_classes, average="macro") 
+        self.auc =  AUROC()
+        self.recall = Recall(average="macro") 
         
     def forward(self, x):
         return self.model(x)
@@ -163,12 +163,14 @@ class SegmentationModel(pl.LightningModule):
       x = x.to(self.device)
       y = y.to(self.device)
       logits = self(x)
-      loss = F.cross_entropy(logits, y)
-         
+      yhat = torch.sigmoid(logits)
+      loss = F.binary_cross_entropy(yhat, y.float())
       
       self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_acc_step", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
-
+      self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
+    
       return loss
     
     def training_epoch_end(self, training_step_outputs):
@@ -180,10 +182,13 @@ class SegmentationModel(pl.LightningModule):
       x = x.to(self.device)
       y = y.to(self.device)
       logits = self(x)
-      loss = F.cross_entropy(logits,y)
+      yhat = torch.sigmoid(logits)
+      loss = F.binary_cross_entropy(yhat, y.float())
         
       self.log("train_val_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
       self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_val_recall",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
 
       return loss
   
@@ -196,9 +201,12 @@ class SegmentationModel(pl.LightningModule):
       x = x.to(self.device)
       y = y.to(self.device)
       logits = self(x)
-      loss = F.cross_entropy(logits,y)
+      yhat = torch.sigmoid(logits)
+      loss = F.binary_cross_entropy(yhat, y.float())
       self.log("train_test_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
       self.log("train_test_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_test_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
 
       return loss
       
@@ -234,10 +242,10 @@ if __name__ == '__main__':
     
     
     pl.seed_everything(42,workers=True)
-    train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
+    train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
+    val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
