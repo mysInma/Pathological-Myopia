@@ -8,7 +8,7 @@ from torchmetrics import Accuracy
 import math 
 
 
-from torchmetrics.classification import Recall, AUROC
+from torchmetrics.classification import BinaryRecall, BinaryAUROC
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
@@ -151,9 +151,9 @@ class SegmentationModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(config)
         self.model = ResUNET(img_size=self.hparams.img_size)
-        self.accuracy = Accuracy()
-        self.auc =  AUROC()
-        self.recall = Recall(average="macro") 
+        self.accuracy = Accuracy(task="binary")
+        self.auc =  BinaryAUROC()
+        self.recall = BinaryRecall(average="macro") 
         
     def forward(self, x):
         return self.model(x)
@@ -211,7 +211,7 @@ class SegmentationModel(pl.LightningModule):
       return loss
       
     def configure_optimizers(self):
-      optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams.lr)
+      optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
       return optimizer
   
 if __name__ == '__main__':
@@ -242,10 +242,16 @@ if __name__ == '__main__':
     
     
     pl.seed_everything(42,workers=True)
-    train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
+    # train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
+    # train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
+    
+    # val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
+    # val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
+   
+    train_features = UNETDataset("../test_prueba/Unet_train.csv","../../test_prueba/",CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
+    val_dataset = UNETDataset("../test_prueba/Unet_val.csv","../../test_prueba/",CustomTransformationResUnet(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer

@@ -142,7 +142,7 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0,"../")
     from utils.dataloader import ResnetDataset
-    from utils.transformations import CustomTransformations
+    from utils.transformations import CustomTransformationResUnet
     from models.resnet50 import MyopiaClasificationModel
     from pytorch_lightning import Trainer
     from pytorch_lightning.callbacks.progress import TQDMProgressBar
@@ -161,10 +161,10 @@ if __name__ == '__main__':
     
     
     pl.seed_everything(42,workers=True)
-    train_features = ResnetDataset("../train_resnet50/resnet_train.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
+    train_features = ResnetDataset("../train_resnet50/resnet_train.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = ResnetDataset("../train_resnet50/resnet_val.csv","../../train_resnet50/",transform=CustomTransformations(config["img_size"]))
+    val_dataset = ResnetDataset("../train_resnet50/resnet_val.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
