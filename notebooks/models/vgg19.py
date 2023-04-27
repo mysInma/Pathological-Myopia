@@ -6,10 +6,8 @@ from torchvision.models import vgg19, VGG19_Weights
 class VGG19TF(nn.Module):
     def __init__(self, img_size, num_classes=3):
         super(VGG19TF, self).__init__()
-        self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1)
-        
         # Extraer las dos últimas estaciones de VGG19
-        features = nn.Sequential(*list(self.vgg19.features.children())[:-2])
+        features = nn.Sequential(*list( vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features.children())[:-2])
         
         # Primera cabeza
         self.head1 = nn.Sequential(
@@ -30,7 +28,7 @@ class VGG19TF(nn.Module):
         )
         
         # Capa completamente conectada adicional para procesar la suma de las salidas de las dos cabezas
-        self.fc = nn.Linear(256, 1)
+        self.fc = nn.Linear(256, num_classes)
         
         self.features = features
         self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
