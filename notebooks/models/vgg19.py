@@ -1,50 +1,56 @@
 import torch
 import torch.nn as nn
+from torchvision.models import vgg19, VGG19_Weights
 
-class VGG19(nn.Module):
-    def __init__(self):
-        super(VGG19, self).__init__()
-        self.conv1_1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
-        self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2_1 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.conv2_2 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv3_1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
-        self.conv3_2 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        self.conv3_3 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        self.conv3_4 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv4_1 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
-        self.conv4_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv4_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv4_4 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv5_1 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv5_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv5_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.conv5_4 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.pool5 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+class VGG19TF(nn.Module):
+    def __init__(self, img_size, num_classes=3):
+        super(VGG19TF, self).__init__()
+        self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1)
+        
+        # Extraer las dos últimas estaciones de VGG19
+        features = nn.Sequential(*list(self.vgg19.features.children())[:-2])
+        
+        # Primera cabeza
+        self.head1 = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512 * 7 * 7, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU()
+        )
+        
+        # Segunda cabeza
+        self.head2 = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512 * 7 * 7, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU()
+        )
+        
+        # Capa completamente conectada adicional para procesar la suma de las salidas de las dos cabezas
+        self.fc = nn.Linear(256, 1)
+        
+        self.features = features
+        self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
-            nn.ReLU(inplace=True),
+            nn.ReLU(True),
             nn.Dropout(),
             nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout()
+            nn.ReLU(True),
+            nn.Dropout(),
+            self.fc
         )
-        self.fc1 = nn.Linear(4096, 2)
+        
 
     def forward(self, x):
-        x = nn.functional.relu(self.conv1_1(x))
-        x = nn.functional.relu(self.conv1_2(x))
-        x = self.pool1(x)
-        x = nn.functional.relu(self.conv2_1(x))
-        x = nn.functional.relu(self.conv2_2(x))
-        x = self.pool2(x)
-        x = nn.functional.relu(self.conv3_1(x))
-        x = nn.functional.relu(self.conv3_2(x))
-       
-#Capa llamada self.fc1 a la clase VGG19 que es una capa lineal que tiene 2 neuronas de salida.
-#Estas neuronas son las encargadas de predecir la posición en x y la posición en y.
-#El método forward, agregar una línea de código para aplanar el tensor x y pasarlo por la nueva capa lineal self.fc1.
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        head1_output = self.head1(x)
+        head2_output = self.head2(x)
+        x = torch.cat([head1_output, head2_output], dim=1)
+        x = self.fc(x)
+        return x
