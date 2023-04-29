@@ -31,7 +31,7 @@ class CustomTransformationResUnet():
     def __call__(self, image_path, mask_path):
         
         x = cv2.imread(image_path)
-        y = cv2.imread(mask_path)
+        y = cv2.imread(mask_path,cv2.COLOR_BGR2GRAY)
         
         transformed = self.transformations(image=x,mask=y)
         
