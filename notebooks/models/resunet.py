@@ -6,7 +6,7 @@ from torchmetrics import Accuracy
 from torch.nn import Conv2d, MaxPool2d, Upsample, ReLU, BatchNorm2d, Sequential
 from torchmetrics import Accuracy  
 import math 
-
+import gc
 
 from torchmetrics.classification import BinaryRecall, BinaryAUROC
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -285,8 +285,9 @@ class Encoder_residual_block(nn.Module):
       x = self.c1(x0)
       x = self.r1(x)
       x = self.c2(x)
-      x = x + x0
-      return self.r2(x)
+      x0 = x + x0
+      del x
+      return self.r2(x0)
       
 class Encoder(nn.Module):
     def __init__(self, img_size, loops):
@@ -336,7 +337,7 @@ class Encoder(nn.Module):
         x = self.residual_blocks[0](x)
         x1 = MaxPool2d(2)(x)
         # (feature sin maxpool, feature despues del maxpool)
-        self.features.append([x,x1])
+        self.features = [[x,x1]]
         for idx,layer in enumerate(self.encoder[1:]):
             x = self.features[-1][1]
             x = layer(x)
@@ -344,6 +345,8 @@ class Encoder(nn.Module):
             x = self.residual_blocks[idx+1](x)
             x1 = MaxPool2d(2)(x)
             self.features.append([x,x1])
+        
+        del x1
         
         return x
       
@@ -387,6 +390,7 @@ class Intermediate(nn.Module):
         x1 = self.decoder_residual_block_1(x1)
         
         x = torch.cat([x,x1],dim=1)
+        del x1
 
         # x = self.convBlock(self.img_size*2,self.img_size,x)
         # x = self.convBlock(self.img_size,self.img_size,x)
@@ -396,7 +400,7 @@ class Intermediate(nn.Module):
 
         # x = self.decoder_residualBlock(self.img_size,self.img_size//2,x)
         x = self.decoder_residual_block_2(x)
-        
+
         return x
     
             
@@ -418,8 +422,9 @@ class Decoder_residual_block(nn.Module):
       x = self.skip(x0) + x
       x = self.r2(x)
       x = self.upsample(x)
-      x = self.c3(x)
-      return x
+      x0 = self.c3(x)
+      del x
+      return x0
             
 class Decoder(nn.Module):            
   def __init__(self, img_size, loops):
@@ -464,7 +469,7 @@ class Decoder(nn.Module):
     x = torch.cat([x1,x],dim=1)
     x = self.conv_block_1(x)
     x = self.conv_block_2(x)
-    
+    del x1
     return x
   
 class ResUNET2(nn.Module):
@@ -480,6 +485,9 @@ class ResUNET2(nn.Module):
     x = self.encoder(x)
     x = self.intermediate(x,self.encoder.features)
     x = self.decoder(x,self.encoder.features)
+    del self.encoder.features
+    torch.cuda.empty_cache()
+    gc.collect()
     return x
     
 # define the LightningModule
@@ -522,10 +530,10 @@ class SegmentationModel(pl.LightningModule):
       yhat = torch.sigmoid(logits)
       loss = F.binary_cross_entropy(yhat, y.float())
         
-      self.log("train_val_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
+      self.log("train_val_loss", loss,prog_bar=True)
+      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
+      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+      self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
       return loss
   
@@ -540,10 +548,10 @@ class SegmentationModel(pl.LightningModule):
       logits = self(x)
       yhat = torch.sigmoid(logits)
       loss = F.binary_cross_entropy(yhat, y.float())
-      self.log("train_test_loss", loss,prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_test_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_test_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
+      self.log("train_test_loss", loss)
+      self.log("train_test_acc", self.accuracy(logits, y))
+      self.log("train_test_auroc", self.auc(yhat, y))
+      self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
 
       return loss
       
@@ -570,7 +578,7 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     
     config = {
-        "batch_size":1,
+        "batch_size":4,
         "img_size":256,
         "num_workers":4,
         "lr":1e-3,
@@ -603,8 +611,8 @@ if __name__ == '__main__':
                     filename="resunet-{epoch}-{train_val_acc:.2f}",
                     save_top_k=2,
                     monitor="train_val_loss")],
-        log_every_n_steps=1,
-        limit_train_batches=1.0, limit_val_batches=1.0
+        log_every_n_steps=40,
+        # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
     #test_loader = train_loader
