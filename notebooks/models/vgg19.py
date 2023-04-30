@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from torchvision.models import vgg19, VGG19_Weights
 
-
 class VGG19TF(nn.Module):
     def __init__(self, img_size, num_classes=3):
         super(VGG19TF, self).__init__()
@@ -20,7 +19,7 @@ class VGG19TF(nn.Module):
         self.fc2 = nn.Linear(128, num_classes)
         self.fc3 = nn.Linear(128, num_classes)
        
-        
+
     def forward(self, x):
         
         #Pasar el modelo
