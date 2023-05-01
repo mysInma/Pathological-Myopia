@@ -75,7 +75,7 @@ class VGG19TF(nn.Module):
     def forward(self, x):
         
         #Pasar el modelo
-        model = self.vgg19(x)
+        #model = self.vgg19(x)
         
         #Extraer capas
         return_nodes = {
@@ -90,7 +90,7 @@ class VGG19TF(nn.Module):
             "features.35": "b1_35",
         
     }
-        model2 = create_feature_extractor(model, return_nodes=return_nodes)
+        model2 = create_feature_extractor(self.vgg19, return_nodes=return_nodes)
         intermediate_outputs = model2(x)
         #print(intermediate_outputs['b1_20'].shape)
         
@@ -125,6 +125,18 @@ class VGG19TF(nn.Module):
         
         conv_21_4 = self.conv_21_4(intermediate_outputs['b1_35'])
         relu_21_4 = self.relu_21_4(conv_21_4)
+        
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWWWWWWWWWWWWWWWWWWWWWWW")
+        
+        print(relu_11_1.shape)
+        print(relu_11_2.shape)
+        print(relu_11_3.shape)
+        print(relu_11_4.shape)
+        print(relu_21_1.shape)
+        print(relu_21_2.shape)
+        print(relu_21_3.shape)
+        print(relu_21_4.shape)
+    
         
         
         sum1 = relu_11_1 + relu_11_2 + relu_11_3 + relu_11_4 + relu_21_1 + relu_21_2 + relu_21_3 + relu_21_4
@@ -161,6 +173,7 @@ class VGG19TF(nn.Module):
         unsample_22_4 = self.unsample_22_4(conv_22_4)
         relu_22_4 = self.relu_22_4(unsample_22_4)
         
+   
         sum2 = relu_12_1 + relu_12_2 + relu_12_3 + relu_12_4 + relu_22_1 + relu_22_2 + relu_22_3 + relu_22_4 
         
         fc1_1 = nn.Linear(sum1, 512)
