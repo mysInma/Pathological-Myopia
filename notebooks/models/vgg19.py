@@ -8,6 +8,8 @@ class VGG19TF(nn.Module):
         
         self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1);
         
+        #x_image = tf.reshape(self.x, [-1, self.pic_size, self.pic_size, 3])
+        
         # Añadir la capa Conv1 y la capa Unpool2
         self.conv1 = nn.Conv2d(512, 128, kernel_size=1)
         self.unpool2 = nn.Upsample(scale_factor=2, mode='nearest')
@@ -18,6 +20,26 @@ class VGG19TF(nn.Module):
         self.fc1 = nn.Linear(128, num_classes)
         self.fc2 = nn.Linear(128, num_classes)
         self.fc3 = nn.Linear(128, num_classes)
+        
+    # def load_image(image_path, max_size=400, shape=None):
+    #     image = Image.open(image_path).convert("RGB")
+    #     if max(image.size)>max_size:
+    #         size=max_size
+    #     else:
+    #         size = max(image.size)
+        
+    #     if shape is not None:
+    #         size=shape
+        
+    #     tfms = transforms.Compose([
+    #         transforms.Resize(size),
+    #         transforms.ToTensor(),
+    #         transforms.Normalize((.5,.5,.5),(.5,.5,.5))
+            
+    #     ])
+        
+    #     image = tfms(image).unsqueeze(0)
+    #     return image
        
 
     def forward(self, x):
@@ -29,17 +51,13 @@ class VGG19TF(nn.Module):
         # a1 = nn.Sequential(*list(model.features.children())[:-1])
         # b2 = nn.Sequential(*list(model.features.children())[:-2])
         
-        # Extraer las dos últimas capas convolucionales de la primera y segunda estación
-        est1 = self.vgg19.features[28:35]
-        est2 = self.vgg19.features[35:]
-        output1 = est1[-2:]
-        output2 = est2[-2:]
-        
-        # Aplicar la convolución y el upsampling
-        x1 = self.conv1(output1[-1])
-        x2 = self.unpool2(output2[-1])
-        x3 = self.avgpool(output1[-2])
-        x4 = self.conv1(output2[-2])
+        # Acceder a las dos primeras capas convolucionales del cuarto bloque
+        conv4_1 = model.features[34]
+        conv4_2 = model.features[36]
+
+        # Acceder a las dos primeras capas convolucionales del quinto bloque
+        conv5_1 = model.features[44]
+        conv5_2 = model.features[46]
         
         
         # Aplicar la convolución y el upsampling
