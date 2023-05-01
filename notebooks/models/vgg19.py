@@ -11,19 +11,19 @@ class VGG19TF(nn.Module):
         
         #Bloque 1 por arriba
         self.conv_11_1 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
-        self.avgpool_11_1 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.avgpool_11_1 = nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
         self.relu_11_1 = nn.ReLU()
         
         self.conv_11_2 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
-        self.avgpool_11_2 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.avgpool_11_2 = nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
         self.relu_11_2 = nn.ReLU()
         
         self.conv_11_3 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
-        self.avgpool_11_3 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.avgpool_11_3 = nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
         self.relu_11_3 = nn.ReLU()
         
         self.conv_11_4 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
-        self.avgpool_11_4 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.avgpool_11_4 = nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
         self.relu_11_4 = nn.ReLU()
         
         #Bloque 2 por arriba
@@ -70,12 +70,24 @@ class VGG19TF(nn.Module):
         self.unsample_22_4 = nn.Upsample(scale_factor=2, mode='nearest')
         self.relu_22_4 = nn.ReLU()
         
-
+        
+        #Capa FC por arriba
+        self.fc1_1 = nn.Linear(25088, 512)
+        self.relu_fc1_1 = nn.ReLU()
+        self.fc1_2 = nn.Linear(512, 512)
+        self.relu_fc1_2 = nn.ReLU()
+        self.fc1_3 = nn.Linear(512,2)
+        self.relu_fc1_3 = nn.ReLU()
+        
+        #Capa FC por abajo
+        self.fc2_1 = nn.Linear(100352, 512)
+        self.relu_fc2_1 = nn.ReLU()
+        self.fc2_2 = nn.Linear(512, 512)
+        self.relu_fc2_2 = nn.ReLU()
+        self.fc2_3 = nn.Linear(512,2)
+        self.relu_fc2_3 = nn.ReLU()
     
     def forward(self, x):
-        
-        #Pasar el modelo
-        #model = self.vgg19(x)
         
         #Extraer capas
         return_nodes = {
@@ -92,7 +104,6 @@ class VGG19TF(nn.Module):
     }
         model2 = create_feature_extractor(self.vgg19, return_nodes=return_nodes)
         intermediate_outputs = model2(x)
-        #print(intermediate_outputs['b1_20'].shape)
         
         
         #Bloque 1 por arriba
@@ -126,18 +137,6 @@ class VGG19TF(nn.Module):
         conv_21_4 = self.conv_21_4(intermediate_outputs['b1_35'])
         relu_21_4 = self.relu_21_4(conv_21_4)
         
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWWWWWWWWWWWWWWWWWWWWWWW")
-        
-        print(relu_11_1.shape)
-        print(relu_11_2.shape)
-        print(relu_11_3.shape)
-        print(relu_11_4.shape)
-        print(relu_21_1.shape)
-        print(relu_21_2.shape)
-        print(relu_21_3.shape)
-        print(relu_21_4.shape)
-    
-        
         
         sum1 = relu_11_1 + relu_11_2 + relu_11_3 + relu_11_4 + relu_21_1 + relu_21_2 + relu_21_3 + relu_21_4
         
@@ -150,7 +149,7 @@ class VGG19TF(nn.Module):
         relu_12_2 = self.relu_12_2(conv_12_2)
         
         conv_12_3 = self.conv_12_3(intermediate_outputs['b1_24'])
-        relu_12_3 = self.conv_12_3(conv_12_3)
+        relu_12_3 = self.relu_12_3(conv_12_3)
         
         conv_12_4 = self.conv_12_4(intermediate_outputs['b1_26'])
         relu_12_4 = self.relu_12_4(conv_12_4)
@@ -163,7 +162,7 @@ class VGG19TF(nn.Module):
         
         conv_22_2 = self.conv_22_2(intermediate_outputs['b1_31'])
         unsample_22_2 = self.unsample_22_2(conv_22_2)
-        relu_22_2 = self.unsample_22_2(unsample_22_2)
+        relu_22_2 = self.relu_22_2(unsample_22_2)
         
         conv_22_3 = self.conv_22_3(intermediate_outputs['b1_33'])
         unsample_22_3 = self.unsample_22_3(conv_22_3)
@@ -176,29 +175,28 @@ class VGG19TF(nn.Module):
    
         sum2 = relu_12_1 + relu_12_2 + relu_12_3 + relu_12_4 + relu_22_1 + relu_22_2 + relu_22_3 + relu_22_4 
         
-        fc1_1 = nn.Linear(sum1, 512)
-        fc1_2 = nn.Linear(sum1, 512)
-        fc1_3 = nn.Linear(sum1, 2)
+        
+        #En forma de vector unidimensional
+        sum1_1 = sum1.view(1, -1)
+        sum2_2 = sum2.view(1, -1)
+        
+        fc1_1 = self.fc1_1(sum1_1)
+        relu_fc1_1 = self.relu_fc1_1(fc1_1)
+        fc1_2 = self.fc1_2(relu_fc1_1)
+        relu_fc1_2 = self.relu_fc1_2(fc1_2)
+        fc1_3 = self.fc1_3(relu_fc1_2)
+        relu_fc1_3 = self.relu_fc1_3(fc1_3)
+        
+        
+        fc2_1 = self.fc2_1(sum2_2)
+        relu_fc2_1 = self.relu_fc2_1(fc2_1)
+        fc2_2 = self.relu_fc2_2(relu_fc2_1)
+        relu_fc2_2 = self.relu_fc2_2(fc2_2)
+        fc2_3 = self.fc2_3(relu_fc2_2)
+        relu_fc2_3 = self.relu_fc2_3(fc2_3)
 
         
-        fc2_1 = nn.Linear(sum2, 512)
-        fc2_2 = nn.Linear(sum2, 512)
-        fc2_3 = nn.Linear(sum2, 2)
-        
-        output = fc1_1 + fc1_2 + fc1_3 + fc2_1 + fc2_2 + fc2_3
-        
-      
-        # Pasar a través de las capas FC
-        # fc1 = sum1.view(sum1.size(0), -1)
-        # fc1 = self.fc1(fc1)
-       
-        
-        # fc2 = sum2.view(sum2.size(0), -1)
-        # fc2 = self.fc2(fc2)
-     
-        
-        # # Sumar fc1 y fc2
-        # output = fc1 + fc2
+        output = relu_fc1_3 + relu_fc2_3
         
         return output
     

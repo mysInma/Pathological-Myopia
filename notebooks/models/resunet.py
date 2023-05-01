@@ -495,7 +495,7 @@ class SegmentationModel(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.save_hyperparameters(config)
-        self.model = ResUNET2(img_size=self.hparams.img_size)
+        self.model = ResUNET(img_size=self.hparams.img_size)
         # self.model.encoder.features = self.model.encoder.features.to(self.device)
         self.accuracy = Accuracy(task="binary")
         self.auc =  BinaryAUROC()
