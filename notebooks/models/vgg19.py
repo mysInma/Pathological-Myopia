@@ -1,91 +1,193 @@
 import torch
 import torch.nn as nn
 from torchvision.models import vgg19, VGG19_Weights
+from torchvision.models.feature_extraction import create_feature_extractor
 
 class VGG19TF(nn.Module):
-    def __init__(self, img_size, num_classes=3):
+    def __init__(self, img_size):
         super(VGG19TF, self).__init__()
         
         self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1);
         
-        #x_image = tf.reshape(self.x, [-1, self.pic_size, self.pic_size, 3])
+        #Bloque 1 por arriba
+        self.conv_11_1 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.avgpool_11_1 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.relu_11_1 = nn.ReLU()
         
-        # Añadir la capa Conv1 y la capa Unpool2
-        self.conv1 = nn.Conv2d(512, 128, kernel_size=1)
-        self.unpool2 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.conv3 = nn.Conv2d(512, 128, kernel_size=1)
-        self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.conv_11_2 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.avgpool_11_2 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.relu_11_2 = nn.ReLU()
+        
+        self.conv_11_3 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.avgpool_11_3 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.relu_11_3 = nn.ReLU()
+        
+        self.conv_11_4 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.avgpool_11_4 = nn.AdaptiveAvgPool2d(output_size=2)
+        self.relu_11_4 = nn.ReLU()
+        
+        #Bloque 2 por arriba
+        self.conv_21_1 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_21_1 = nn.ReLU()
+        
+        self.conv_21_2 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_21_2 = nn.ReLU()
+        
+        self.conv_21_3 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_21_3 = nn.ReLU()
+        
+        self.conv_21_4 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_21_4 = nn.ReLU()
+        
+        #Bloque 1 por abajo
+        self.conv_12_1 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_12_1 = nn.ReLU()
+        
+        self.conv_12_2 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_12_2 = nn.ReLU()
+        
+        self.conv_12_3 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_12_3 = nn.ReLU()
+        
+        self.conv_12_4 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.relu_12_4 = nn.ReLU()
+        
+        
+        #Bloque 2 por abajo
+        self.conv_22_1 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.unsample_22_1 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.relu_22_1 = nn.ReLU()
+        
+        self.conv_22_2 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.unsample_22_2 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.relu_22_2 = nn.ReLU()
+        
+        self.conv_22_3 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.unsample_22_3 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.relu_22_3 = nn.ReLU()
+        
+        self.conv_22_4 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
+        self.unsample_22_4 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.relu_22_4 = nn.ReLU()
+        
 
-        # Añadir las capas FC adicionales
-        self.fc1 = nn.Linear(128, num_classes)
-        self.fc2 = nn.Linear(128, num_classes)
-        self.fc3 = nn.Linear(128, num_classes)
-        
-    # def load_image(image_path, max_size=400, shape=None):
-    #     image = Image.open(image_path).convert("RGB")
-    #     if max(image.size)>max_size:
-    #         size=max_size
-    #     else:
-    #         size = max(image.size)
-        
-    #     if shape is not None:
-    #         size=shape
-        
-    #     tfms = transforms.Compose([
-    #         transforms.Resize(size),
-    #         transforms.ToTensor(),
-    #         transforms.Normalize((.5,.5,.5),(.5,.5,.5))
-            
-    #     ])
-        
-    #     image = tfms(image).unsqueeze(0)
-    #     return image
-       
-
+    
     def forward(self, x):
         
         #Pasar el modelo
         model = self.vgg19(x)
         
-         # Extraer las dos últimas estaciones de VGG19
-        # a1 = nn.Sequential(*list(model.features.children())[:-1])
-        # b2 = nn.Sequential(*list(model.features.children())[:-2])
+        #Extraer capas
+        return_nodes = {
+            "features.20": "b1_20",
+            "features.22": "b1_22",
+            "features.24": "b1_24",
+            "features.26": "b1_26",
+            
+            "features.29": "b1_29",
+            "features.31": "b1_31",
+            "features.33": "b1_33",
+            "features.35": "b1_35",
         
-        # Acceder a las dos primeras capas convolucionales del cuarto bloque
-        conv4_1 = model.features[34]
-        conv4_2 = model.features[36]
+    }
+        model2 = create_feature_extractor(model, return_nodes=return_nodes)
+        intermediate_outputs = model2(x)
+        #print(intermediate_outputs['b1_20'].shape)
+        
+        
+        #Bloque 1 por arriba
+        conv_11_1 = self.conv_11_1(intermediate_outputs['b1_20'])
+        avgpool_11_1 = self.avgpool_11_1(conv_11_1)
+        relu_11_1 = self.relu_11_1(avgpool_11_1)
+        
+        conv_11_2 = self.conv_11_2(intermediate_outputs['b1_22'])
+        avgpool_11_2 = self.avgpool_11_2(conv_11_2)
+        relu_11_2 = self.relu_11_2(avgpool_11_2)
+        
+        conv_11_3 = self.conv_11_3(intermediate_outputs['b1_24'])
+        avgpool_11_3 = self.avgpool_11_3(conv_11_3)
+        relu_11_3 = self.relu_11_3(avgpool_11_3)
+        
+        conv_11_4 = self.conv_11_4(intermediate_outputs['b1_26'])
+        avgpool_11_4 = self.avgpool_11_4(conv_11_4)
+        relu_11_4 = self.relu_11_4(avgpool_11_4)
+        
+        
+        #Bloque 2 por arriba
+        conv_21_1 = self.conv_21_1(intermediate_outputs['b1_29'])
+        relu_21_1 = self.relu_21_1(conv_21_1)
+        
+        conv_21_2 = self.conv_21_2(intermediate_outputs['b1_31'])
+        relu_21_2 = self.relu_21_2(conv_21_2)
+        
+        conv_21_3 = self.conv_21_3(intermediate_outputs['b1_33'])
+        relu_21_3 = self.relu_21_3(conv_21_3)
+        
+        conv_21_4 = self.conv_21_4(intermediate_outputs['b1_35'])
+        relu_21_4 = self.relu_21_4(conv_21_4)
+        
+        
+        sum1 = relu_11_1 + relu_11_2 + relu_11_3 + relu_11_4 + relu_21_1 + relu_21_2 + relu_21_3 + relu_21_4
+        
+        
+         #Bloque 1 por abajo
+        conv_12_1 = self.conv_12_1(intermediate_outputs['b1_20'])
+        relu_12_1 = self.relu_12_1(conv_12_1)
+        
+        conv_12_2 = self.conv_12_2(intermediate_outputs['b1_22'])
+        relu_12_2 = self.relu_12_2(conv_12_2)
+        
+        conv_12_3 = self.conv_12_3(intermediate_outputs['b1_24'])
+        relu_12_3 = self.conv_12_3(conv_12_3)
+        
+        conv_12_4 = self.conv_12_4(intermediate_outputs['b1_26'])
+        relu_12_4 = self.relu_12_4(conv_12_4)
+        
+        
+        #Bloque 2 por abajo
+        conv_22_1 = self.conv_22_1(intermediate_outputs['b1_29'])
+        unsample_22_1 = self.unsample_22_1(conv_22_1)
+        relu_22_1 = self.relu_22_1(unsample_22_1)
+        
+        conv_22_2 = self.conv_22_2(intermediate_outputs['b1_31'])
+        unsample_22_2 = self.unsample_22_2(conv_22_2)
+        relu_22_2 = self.unsample_22_2(unsample_22_2)
+        
+        conv_22_3 = self.conv_22_3(intermediate_outputs['b1_33'])
+        unsample_22_3 = self.unsample_22_3(conv_22_3)
+        relu_22_3 = self.relu_22_3(unsample_22_3)
+        
+        conv_22_4 = self.conv_22_4(intermediate_outputs['b1_35'])
+        unsample_22_4 = self.unsample_22_4(conv_22_4)
+        relu_22_4 = self.relu_22_4(unsample_22_4)
+        
+        sum2 = relu_12_1 + relu_12_2 + relu_12_3 + relu_12_4 + relu_22_1 + relu_22_2 + relu_22_3 + relu_22_4 
+        
+        fc1_1 = nn.Linear(sum1, 512)
+        fc1_2 = nn.Linear(sum1, 512)
+        fc1_3 = nn.Linear(sum1, 2)
 
-        # Acceder a las dos primeras capas convolucionales del quinto bloque
-        conv5_1 = model.features[44]
-        conv5_2 = model.features[46]
         
+        fc2_1 = nn.Linear(sum2, 512)
+        fc2_2 = nn.Linear(sum2, 512)
+        fc2_3 = nn.Linear(sum2, 2)
         
-        # Aplicar la convolución y el upsampling
-        # x1 = self.avgpool(a)
-        # x2 = self.conv1(b)
-        # x3 = self.conv3(c)
-        # x4 = self.unpool2(d)
-
-        # Sumar x1 y x2
-        x5 = x1 + x2
+        output = fc1_1 + fc1_2 + fc1_3 + fc2_1 + fc2_2 + fc2_3
         
-        # Sumar x3 y x4
-        x6 = x3 + x4
-        
+      
         # Pasar a través de las capas FC
-        x5 = x5.view(x5.size(0), -1)
-        x5 = self.fc1(x5)
+        # fc1 = sum1.view(sum1.size(0), -1)
+        # fc1 = self.fc1(fc1)
+       
         
-        x6 = x6.view(x6.size(0), -1)
-        x6 = self.fc2(x6)
+        # fc2 = sum2.view(sum2.size(0), -1)
+        # fc2 = self.fc2(fc2)
+     
         
-        # Sumar x5 y x6
-        x7 = x5 + x6
+        # # Sumar fc1 y fc2
+        # output = fc1 + fc2
         
-        # Pasar a través de la capa final FC
-        x7 = self.fc3(x7)
-        
-        return x7
+        return output
     
     
 if __name__ == '__main__':
