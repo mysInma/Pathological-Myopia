@@ -177,8 +177,8 @@ class VGG19TF(nn.Module):
         
         
         #En forma de vector unidimensional
-        sum1_1 = sum1.view(1, -1)
-        sum2_2 = sum2.view(1, -1)
+        sum1_1 = sum1.flatten(start_dim=1)
+        sum2_2 = sum2.flatten(start_dim=1)
         
         fc1_1 = self.fc1_1(sum1_1)
         relu_fc1_1 = self.relu_fc1_1(fc1_1)
@@ -205,4 +205,4 @@ if __name__ == '__main__':
     model = VGG19TF(224)
     with torch.no_grad():
         for i in range(5):
-          model(torch.rand(1,3,224,224))
+          model(torch.rand(4,3,224,224))

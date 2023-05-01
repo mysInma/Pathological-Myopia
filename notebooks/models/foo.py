@@ -16,4 +16,4 @@ if __name__ == '__main__':
     img_size = 224
     model = VGG19TF(img_size)
     with torch.no_grad():
-          model(torch.rand(1,3,img_size,img_size))
+          model(torch.rand(4,3,img_size,img_size))
