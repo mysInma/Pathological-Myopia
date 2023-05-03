@@ -79,6 +79,48 @@ def unetCSV(dir_path:str, mask_path:str, json_path:str, output_path:str):
     
     createTrainValCSV(X_train,X_val,y_train,y_val,"Unet","imgPath","maskPath",output_path)
     
+    
+def vggCSV(dir_path:str, xlsx_path: str, json_path:str, out_path:str,):
+    """_summary_
+
+    Args:
+        dir_path (str): Path where the data is contained
+        out_path (str): Output path to save the resulting csv
+        xlsx_path (str): Path of the xlsx file containing the x and y coordinates
+        json_path (str): Json file path if you want to miss some data to the final csv
+
+    """
+    
+    df = pd.DataFrame(columns=["imgPath","x_fovea", "y_fovea"])
+    
+    df_xlsx = pd.read_excel(xlsx_path)
+    
+    json_photos = readJSON(json_path)
+    
+    
+    for index, img_path in enumerate(glob(os.path.join(dir_path,"*.jpg"))):
+        if os.path.basename(img_path) in json_photos:
+            continue
+        file_name = os.path.basename(img_path) #para extraer el nombre de archivo de img_path.
+        #print(file_name) #Hasta aquí va perfe
+        row = df_xlsx.loc[df_xlsx['imgName'] == file_name]
+        print(row)
+        if not row.empty:
+            x_fovea = row['Fovea_X'].values[0]
+            y_fovea = row['Fovea_Y'].values[0]
+            df.loc[index] = [img_path, x_fovea, y_fovea]
+        else:
+            df.loc[index] = [img_path, None, None]
+            
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+        
+    X_train, X_val, y_train, y_val, z_train, z_val = train_test_split(df["imgPath"], df["x_fovea"], df["y_fovea"], test_size=0.2, random_state=42)
+    
+    createTrainVggValCSV(X_train,X_val, y_train,y_val, z_train,z_val,"VGG","imgPath", "x_fovea", "y_fovea", out_path)
+    
+    
+    
 def readJSON(json_path:str):
     try:
         with open(json_path) as json_file:
@@ -105,6 +147,13 @@ def createTrainValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_v
     
     pd.DataFrame({x_name: X_val.values, y_name:y_val.values}).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)
     
+
+def createTrainVggValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_val:pd.Series,z_train:pd.Series, z_val:pd.Series,
+                        csv_name:str,x_name:str,y_name:float, z_name:float, output_path:str):
+
+    pd.DataFrame({x_name: X_train.values, y_name:y_train.values, z_name:z_train.values}).to_csv(os.path.join(output_path,f"{csv_name}_train.csv"),index=False)
+    
+    pd.DataFrame({x_name: X_val.values, y_name:y_val.values, z_name:z_val.values}).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)    
     
 def encodingLabel(label):
     if "N" in label:
