@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from torchvision.io import read_image
 from glob import glob
 import pandas as pd
-import torch.nn.functional as F
+import torch.nn.functional as F1
 
 class ResnetDataset(Dataset):
     def __init__(self, annotations_file,img_dir , num_clases=3 ,transform=None, target_transform=None):
@@ -48,6 +48,37 @@ class UNETDataset(Dataset):
         image,mask = self.transform(img_path,mask_path)
         
         return image, mask
+    
+
+
+class VGGDataset(Dataset):
+    def __init__(self, annotations_file,img_dir ,transform=None, target_transform=None):
+        self.df = pd.read_csv(annotations_file)
+        self.img_dir = img_dir
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return self.df.shape[0]
+
+    def __getitem__(self, idx):
+        img_path = self.df.loc[idx, "imgPath"]
+        x_fovea = self.df.loc[idx, "x_fovea"]
+        y_fovea = self.df.loc[idx, "y_fovea"]
+        # image = read_image(img_path)
+        # if self.transform:
+        #     image = self.transform(image)
+        # fovea_loc = torch.tensor([x_fovea, y_fovea]) #Para que se almecene en un formato compatible con Pytorch
+        
+        # return image, fovea_loc
+    
+        image = read_image(img_path)
+        if self.transform:
+            image = self.transform(image)
+        return image, x_fovea, y_fovea
+    
+
+
 # def one_hot_encode(data):
 #     drop_enc = OneHotEncoder(drop='first').fit(data)
 #     drop_enc.categories_
