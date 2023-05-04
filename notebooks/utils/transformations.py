@@ -1,3 +1,4 @@
+from typing import Any
 import torch
 from  torchvision import transforms
 import cv2
@@ -36,3 +37,20 @@ class CustomTransformationResUnet():
         transformed = self.transformations(image=x,mask=y)
         
         return transformed["image"],transformed["mask"]
+    
+    
+class CustomTransformationVgg():
+    def __init__(self, size):
+        self.size = size
+    def __call__(self, img):
+        return transforms.Compose([
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.RandomChoice([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.Compose([
+                transforms.Pad(int(self.size-(self.size//1.2)),fill=255)
+                ])
+            ]),
+            transforms.Resize((self.size,self.size))
+        ])(img)
