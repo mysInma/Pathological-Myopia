@@ -2,12 +2,15 @@ import torch
 import torch.nn as nn
 from torchvision.models import vgg19, VGG19_Weights
 from torchvision.models.feature_extraction import create_feature_extractor
+import math
+
 
 class VGG19TF(nn.Module):
     def __init__(self, img_size):
         super(VGG19TF, self).__init__()
         
         self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1);
+        self.baseInputLayers = self.init_input_layer(img_size)
         
         #Bloque 1 por arriba
         self.conv_11_1 = nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0)
@@ -86,8 +89,20 @@ class VGG19TF(nn.Module):
         self.relu_fc2_2 = nn.ReLU()
         self.fc2_3 = nn.Linear(512,2)
         self.relu_fc2_3 = nn.ReLU()
+        
+        
+    def init_input_layer(self,image_size):
+        exp_img_size = math.log2(image_size)
+        exp_img_size_dest = math.log2(224)
+        arch_layers = []
+        for _ in range(int(exp_img_size-exp_img_size_dest)):
+            arch_layers.append(nn.Conv2d(3,3,(3,3),padding=1,stride=1))
+            arch_layers.append(nn.ReLU())
+        return nn.Sequential(*arch_layers)
     
-    def forward(self, x):
+    def forward(self, images):
+        
+        x = self.baseInputLayers(images)
         
         #Extraer capas
         return_nodes = {
