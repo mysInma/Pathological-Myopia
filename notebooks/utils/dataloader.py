@@ -65,17 +65,17 @@ class VGGDataset(Dataset):
         img_path = self.df.loc[idx, "imgPath"]
         x_fovea = self.df.loc[idx, "x_fovea"]
         y_fovea = self.df.loc[idx, "y_fovea"]
-        # image = read_image(img_path)
-        # if self.transform:
-        #     image = self.transform(image)
-        # fovea_loc = torch.tensor([x_fovea, y_fovea]) #Para que se almecene en un formato compatible con Pytorch
-        
-        # return image, fovea_loc
-    
         image = read_image(img_path)
         if self.transform:
             image = self.transform(image)
-        return image, x_fovea, y_fovea
+        fovea_loc = torch.tensor([x_fovea, y_fovea]) #Para que se almecene en un formato compatible con Pytorch
+        
+        return image, fovea_loc
+    
+        # image = read_image(img_path)
+        # if self.transform:
+        #     image = self.transform(image)
+        # return image, x_fovea, y_fovea
     
 
 

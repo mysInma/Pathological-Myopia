@@ -1,15 +1,21 @@
 import torch
-import torch.nn as nn
 from torchvision.models import vgg19, VGG19_Weights
 from torchvision.models.feature_extraction import create_feature_extractor
 import math
+import pytorch_lightning as pl
+from torch.nn import functional as F
+from torchmetrics.classification import Accuracy, BinaryAUROC, BinaryRecall
+from torch import optim, nn
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
+
 
 
 class VGG19TF(nn.Module):
     def __init__(self, img_size):
         super(VGG19TF, self).__init__()
         
-        self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1);
+        self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1)
         self.baseInputLayers = self.init_input_layer(img_size)
         
         #Bloque 1 por arriba
@@ -216,8 +222,132 @@ class VGG19TF(nn.Module):
         return output
     
     
+# define the LightningModule
+class VGGModel(pl.LightningModule):
+    def __init__(self, config):
+        super().__init__()
+        self.save_hyperparameters(config)
+        self.model = VGG19TF(img_size=self.hparams.img_size)
+        self.accuracy = Accuracy(task="binary")
+        self.auc = BinaryAUROC()
+        self.recall = BinaryRecall(average="macro") 
+        
+    def forward(self, x):
+        return self.model(x)
+    
+    def training_step(self, batch, batch_idx):
+      x, y = batch
+      logits = self(x)
+      yhat = torch.sigmoid(logits)
+      loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
+      
+      self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
+      # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
+    
+      return loss
+    
+    def training_epoch_end(self, training_step_outputs):
+        self.log("step",self.current_epoch)
+        
+        
+    def validation_step(self, batch, batch_idx):
+        x,y = batch
+        print(batch)
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
+        logits = self(x)
+        yhat = torch.sigmoid(logits)
+        loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
+        
+        self.log("train_val_loss", loss,prog_bar=True)
+        self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
+        self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+        self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
+
+        return loss
+  
+    def validation_epoch_end(self, validation_step_outputs):
+      self.log("step",self.current_epoch)
+  
+      
+    def test_step(self,batch,batch_idx):
+      x,y = batch
+      logits = self(x)
+      yhat = torch.sigmoid(logits)
+      loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
+    
+      self.log("train_test_loss", loss)
+      self.log("train_test_acc", self.accuracy(logits, y))
+      self.log("train_test_auroc", self.auc(yhat, y))
+      self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
+
+      return loss
+      
+    def configure_optimizers(self):
+      optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
+      return optimizer
+        
+    
+    
 if __name__ == '__main__':
-    model = VGG19TF(224)
-    with torch.no_grad():
-        for i in range(5):
-          model(torch.rand(4,3,224,224))
+    # model = VGG19TF(224)
+    # with torch.no_grad():
+    #     for i in range(5):
+    #       model(torch.rand(4,3,224,224))
+    
+    import sys
+    sys.path.insert(0,"../")
+    from utils.dataloader import VGGDataset
+    from utils.transformations import CustomTransformationVgg
+    from models.vgg19 import VGG19TF
+    from pytorch_lightning import Trainer
+    from pytorch_lightning.callbacks.progress import TQDMProgressBar
+    from torchmetrics.functional import accuracy
+    import torch
+    from torch.utils.data import DataLoader
+    
+    config = {
+        "batch_size":4,
+        "img_size":224,
+        "num_workers":4,
+        "lr":1e-3,
+    }
+    
+    
+    pl.seed_everything(42,workers=True)
+    
+    # train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/",CustomTransformationVgg(config["img_size"]))
+    # train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
+    
+    # val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/",CustomTransformationVgg(config["img_size"]))
+    # val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
+    
+    train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/",None)
+    train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
+    
+    val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/", None)
+    val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
+
+    # Initialize a trainer
+    trainer = Trainer(
+        accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
+        #deterministic=True,
+        accelerator="gpu",
+        devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
+        max_epochs=1000,
+        callbacks=[TQDMProgressBar(),
+                   EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
+                   ModelCheckpoint(dirpath="./model-checkpoint-VGG19/",\
+                    filename="vgg-{epoch}-{train_val_acc:.2f}",
+                    save_top_k=2,
+                    monitor="train_val_loss")],
+        log_every_n_steps=40,
+        # limit_train_batches=1.0, limit_val_batches=1.0
+        # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
+    )
+    #test_loader = train_loader
+
+    miopia_model = VGGModel(config)
+    trainer.fit(miopia_model, train_loader,val_loader)

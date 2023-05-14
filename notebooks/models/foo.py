@@ -17,3 +17,4 @@ if __name__ == '__main__':
     model = VGG19TF(img_size)
     with torch.no_grad():
           model(torch.rand(4,3,img_size,img_size))
+          
