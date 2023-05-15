@@ -63,8 +63,7 @@ class VGGDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.df.loc[idx, "imgPath"]
-        x_fovea = self.df.loc[idx, "x_fovea"]
-        y_fovea = self.df.loc[idx, "y_fovea"]
+        x_fovea, y_fovea = list(map(lambda x: float(x) ,self.df.loc[idx, "xy_fovea"].split("/")))
         image = read_image(img_path)
         if self.transform:
             image = self.transform(image)

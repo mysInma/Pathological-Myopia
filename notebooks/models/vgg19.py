@@ -14,6 +14,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 class VGG19TF(nn.Module):
     def __init__(self, img_size):
         super(VGG19TF, self).__init__()
+        self.img_size = img_size
         
         self.vgg19 = vgg19(weights=VGG19_Weights.IMAGENET1K_V1)
         self.baseInputLayers = self.init_input_layer(img_size)
@@ -228,9 +229,9 @@ class VGGModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(config)
         self.model = VGG19TF(img_size=self.hparams.img_size)
-        self.accuracy = Accuracy(task="binary")
-        self.auc = BinaryAUROC()
-        self.recall = BinaryRecall(average="macro") 
+        # self.accuracy = Accuracy(task="binary")
+        # self.auc = BinaryAUROC()
+        # self.recall = BinaryRecall(average="macro") 
         
     def forward(self, x):
         return self.model(x)
@@ -238,13 +239,13 @@ class VGGModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
       x, y = batch
       logits = self(x)
-      yhat = torch.sigmoid(logits)
+      yhat = torch.sigmoid(logits) * (self.model.img_size-1)
       loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
       
       self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
+    #   self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+    #   self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+    #   self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
       return loss
@@ -255,16 +256,14 @@ class VGGModel(pl.LightningModule):
         
     def validation_step(self, batch, batch_idx):
         x,y = batch
-        print(batch)
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
         logits = self(x)
-        yhat = torch.sigmoid(logits)
+        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
         loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
         
         self.log("train_val_loss", loss,prog_bar=True)
-        self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-        self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
-        self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
+        # self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
+        # self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+        # self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
         return loss
   

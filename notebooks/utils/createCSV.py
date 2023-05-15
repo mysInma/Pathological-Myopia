@@ -90,13 +90,11 @@ def vggCSV(dir_path:str, xlsx_path: str, json_path:str, out_path:str,):
         json_path (str): Json file path if you want to miss some data to the final csv
 
     """
-    
-    df = pd.DataFrame(columns=["imgPath","x_fovea", "y_fovea"])
+    df = pd.DataFrame(columns=["imgPath","xy_fovea"])
     
     df_xlsx = pd.read_excel(xlsx_path)
     
     json_photos = readJSON(json_path)
-    
     
     for index, img_path in enumerate(glob(os.path.join(dir_path,"*.jpg"))):
         if os.path.basename(img_path) in json_photos:
@@ -108,16 +106,14 @@ def vggCSV(dir_path:str, xlsx_path: str, json_path:str, out_path:str,):
         if not row.empty:
             x_fovea = row['Fovea_X'].values[0]
             y_fovea = row['Fovea_Y'].values[0]
-            df.loc[index] = [img_path, x_fovea, y_fovea]
-        else:
-            df.loc[index] = [img_path, None, None]
+            df.loc[index] = [img_path, f"{x_fovea}/{y_fovea}"]
             
     if not os.path.exists(out_path):
         os.makedirs(out_path)
         
-    X_train, X_val, y_train, y_val, z_train, z_val = train_test_split(df["imgPath"], df["x_fovea"], df["y_fovea"], test_size=0.2, random_state=42)
-    
-    createTrainVggValCSV(X_train,X_val, y_train,y_val, z_train,z_val,"VGG","imgPath", "x_fovea", "y_fovea", out_path)
+    X_train, X_val, y_train, y_val = train_test_split(df["imgPath"], df["xy_fovea"], test_size=0.2, random_state=42)
+    # createTrainVggValCSV(X_train,X_val, y_train,y_val, z_train,z_val,"VGG","imgPath", "x_fovea", "y_fovea", out_path)
+    createTrainValCSV(X_train,X_val,y_train,y_val,"VGG","imgPath","xy_fovea",out_path)
     
     
     
