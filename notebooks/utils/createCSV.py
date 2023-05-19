@@ -151,12 +151,12 @@ def createTrainValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_v
     
 #     pd.DataFrame({x_name: X_val.values, y_name:y_val.values, z_name:z_val.values}).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)    
 
-def createTrainVggValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_val:pd.Series,z_train:pd.Series, z_val:pd.Series,
-                        csv_name:str,x_name:str,y_name:str, z_name:str, output_path:str):
+# def createTrainVggValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_val:pd.Series,z_train:pd.Series, z_val:pd.Series,
+#                         csv_name:str,x_name:str,y_name:str, z_name:str, output_path:str):
 
-    pd.DataFrame({x_name: X_train.values, y_name:y_train.values, z_name:z_train.values}).to_csv(os.path.join(output_path,f"{csv_name}_train.csv"),index=False)
+#     pd.DataFrame({x_name: X_train.values, y_name:y_train.values, z_name:z_train.values}).to_csv(os.path.join(output_path,f"{csv_name}_train.csv"),index=False)
     
-    pd.DataFrame({x_name: X_val.values, y_name:y_val.values, z_name:z_val.values}).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)    
+#     pd.DataFrame({x_name: X_val.values, y_name:y_val.values, z_name:z_val.values}).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)    
     
 def encodingLabel(label):
     if "N" in label:

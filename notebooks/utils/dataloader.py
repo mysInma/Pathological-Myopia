@@ -8,6 +8,7 @@ from torchvision.io import read_image
 from glob import glob
 import pandas as pd
 import torch.nn.functional as F1
+import numpy as np
 
 class ResnetDataset(Dataset):
     def __init__(self, annotations_file,img_dir , num_clases=3 ,transform=None, target_transform=None):
@@ -61,21 +62,29 @@ class VGGDataset(Dataset):
     def __len__(self):
         return self.df.shape[0]
 
+    # def __getitem__(self, idx):
+    #     img_path = self.df.loc[idx, "imgPath"]
+    #     x_fovea, y_fovea = list(map(lambda x: float(x) ,self.df.loc[idx, "xy_fovea"].split("/")))
+    #     image = read_image(img_path)
+    #     if self.transform:
+    #         image = self.transform(image)
+    #     fovea_loc = torch.tensor([x_fovea, y_fovea]) #Para que se almecene en un formato compatible con Pytorch
+               
+    #     return image, fovea_loc
+    
+    
     def __getitem__(self, idx):
         img_path = self.df.loc[idx, "imgPath"]
         x_fovea, y_fovea = list(map(lambda x: float(x) ,self.df.loc[idx, "xy_fovea"].split("/")))
         image = read_image(img_path)
+        fovea_loc = torch.tensor([x_fovea, y_fovea])
         if self.transform:
-            image = self.transform(image)
-        fovea_loc = torch.tensor([x_fovea, y_fovea]) #Para que se almecene en un formato compatible con Pytorch
+            image_res, fovea_loc = self.transform(image, fovea_loc)
         
-        return image, fovea_loc
+        return image_res, fovea_loc
     
-        # image = read_image(img_path)
-        # if self.transform:
-        #     image = self.transform(image)
-        # return image, x_fovea, y_fovea
     
+  
 
 
 # def one_hot_encode(data):

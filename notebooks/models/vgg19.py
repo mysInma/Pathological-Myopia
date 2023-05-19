@@ -278,9 +278,9 @@ class VGGModel(pl.LightningModule):
       loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
     
       self.log("train_test_loss", loss)
-      self.log("train_test_acc", self.accuracy(logits, y))
-      self.log("train_test_auroc", self.auc(yhat, y))
-      self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
+    #   self.log("train_test_acc", self.accuracy(logits, y))
+    #   self.log("train_test_auroc", self.auc(yhat, y))
+    #   self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
 
       return loss
       
@@ -309,24 +309,18 @@ if __name__ == '__main__':
     
     config = {
         "batch_size":4,
-        "img_size":224,
+        "img_size":1344,
         "num_workers":4,
         "lr":1e-3,
     }
     
-    
     pl.seed_everything(42,workers=True)
     
-    # train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/",CustomTransformationVgg(config["img_size"]))
-    # train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
-    
-    # val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/",CustomTransformationVgg(config["img_size"]))
-    # val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
-    
-    train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/",None)
+        
+    train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/", None)
+    val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
