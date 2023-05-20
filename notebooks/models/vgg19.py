@@ -4,10 +4,10 @@ from torchvision.models.feature_extraction import create_feature_extractor
 import math
 import pytorch_lightning as pl
 from torch.nn import functional as F
-from torchmetrics.classification import Accuracy, BinaryAUROC, BinaryRecall
 from torch import optim, nn
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
+from torchmetrics.functional import pairwise_euclidean_distance
 
 
 
@@ -229,26 +229,25 @@ class VGGModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(config)
         self.model = VGG19TF(img_size=self.hparams.img_size)
-        # self.accuracy = Accuracy(task="binary")
-        # self.auc = BinaryAUROC()
-        # self.recall = BinaryRecall(average="macro") 
+
         
     def forward(self, x):
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
-      x, y = batch
-      logits = self(x)
-      yhat = torch.sigmoid(logits) * (self.model.img_size-1)
-      loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
-      
-      self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
-    #   self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-    #   self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-    #   self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
-      # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
-    
-      return loss
+        x, y = batch
+        logits = self(x)
+        yhat = torch.sigmoid(logits) * (self.model.img_size-1)
+        y = torch.squeeze(y, dim=1)
+        loss = pairwise_euclidean_distance( yhat, y , reduction = 'mean')
+        print(loss)
+
+        variance = torch.var(loss)
+
+        self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_euclidean_distance_variance", variance, prog_bar=True, on_epoch=True, on_step=False)
+        
+        return loss
     
     def training_epoch_end(self, training_step_outputs):
         self.log("step",self.current_epoch)
@@ -258,37 +257,45 @@ class VGGModel(pl.LightningModule):
         x,y = batch
         logits = self(x)
         yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
+        y = torch.squeeze(y, dim=1)
+
+        loss = pairwise_euclidean_distance( yhat, y , reduction = 'mean') 
         
-        self.log("train_val_loss", loss,prog_bar=True)
-        # self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-        # self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
-        # self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
+        variance = torch.var(loss)
+        print(variance)
+
+        
+        self.log("train_val_loss", loss, prog_bar=True)
+        self.log("train_val_euclidean_distance_variance", variance, prog_bar=True)
+
 
         return loss
   
     def validation_epoch_end(self, validation_step_outputs):
-      self.log("step",self.current_epoch)
+        self.log("step",self.current_epoch)
   
       
     def test_step(self,batch,batch_idx):
-      x,y = batch
-      logits = self(x)
-      yhat = torch.sigmoid(logits)
-      loss = F.pairwise_distance(yhat, y.float(), p=2).mean()
-    
-      self.log("train_test_loss", loss)
-    #   self.log("train_test_acc", self.accuracy(logits, y))
-    #   self.log("train_test_auroc", self.auc(yhat, y))
-    #   self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
+        x,y = batch
+        logits = self(x)
+        yhat = torch.sigmoid(logits)
+        y = torch.squeeze(y, dim=1)
+        loss = pairwise_euclidean_distance( yhat, y , reduction = 'mean')
 
-      return loss
-      
-    def configure_optimizers(self):
-      optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
-      return optimizer
+        variance = torch.var(loss)
+
+
+        self.log("train_test_loss", loss)
+        self.log("train_test_euclidean_distance_variance", variance)
         
-    
+        
+        return loss
+        
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
+        return optimizer
+            
+        
     
 if __name__ == '__main__':
     # model = VGG19TF(224)
@@ -309,7 +316,7 @@ if __name__ == '__main__':
     
     config = {
         "batch_size":4,
-        "img_size":1344,
+        "img_size":896,
         "num_workers":4,
         "lr":1e-3,
     }
