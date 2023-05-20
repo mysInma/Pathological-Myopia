@@ -98,12 +98,12 @@ class VGG19TF(nn.Module):
         self.relu_fc2_3 = nn.ReLU()
         
         
-    def init_input_layer(self,image_size):
-        exp_img_size = math.log2(image_size)
-        exp_img_size_dest = math.log2(224)
+    def init_input_layer(self,image_size=896):
+        # exp_img_size = math.log(image_size)
+        # exp_img_size_dest = math.log2(224)
         arch_layers = []
-        for _ in range(int(exp_img_size-exp_img_size_dest)):
-            arch_layers.append(nn.Conv2d(3,3,(3,3),padding=1,stride=1))
+        for _ in range(2):
+            arch_layers.append(nn.Conv2d(3,3,(3,3),padding=1,stride=2))
             arch_layers.append(nn.ReLU())
         return nn.Sequential(*arch_layers)
     

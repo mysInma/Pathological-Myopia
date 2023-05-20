@@ -4,6 +4,7 @@ import os
 import json
 from sklearn.model_selection import train_test_split
 import numpy as np 
+from typing import Union, List
 
 
 def resnetCSV(dir_path: str,outputPath:str,json_path:str):
@@ -90,7 +91,7 @@ def vggCSV(dir_path:str, xlsx_path: str, json_path:str, out_path:str,):
         json_path (str): Json file path if you want to miss some data to the final csv
 
     """
-    df = pd.DataFrame(columns=["imgPath","xy_fovea"])
+    df = pd.DataFrame(columns=["imgPath","x_fovea","y_fovea"])
     
     df_xlsx = pd.read_excel(xlsx_path)
     
@@ -102,20 +103,17 @@ def vggCSV(dir_path:str, xlsx_path: str, json_path:str, out_path:str,):
         file_name = os.path.basename(img_path) #para extraer el nombre de archivo de img_path.
         #print(file_name) #Hasta aquí va perfe
         row = df_xlsx.loc[df_xlsx['imgName'] == file_name]
-        print(row)
         if not row.empty:
             x_fovea = row['Fovea_X'].values[0]
             y_fovea = row['Fovea_Y'].values[0]
-            df.loc[index] = [img_path, f"{x_fovea}/{y_fovea}"]
+            df.loc[index] = [img_path, x_fovea, y_fovea]
             
     if not os.path.exists(out_path):
         os.makedirs(out_path)
         
-    X_train, X_val, y_train, y_val = train_test_split(df["imgPath"], df["xy_fovea"], test_size=0.2, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(df["imgPath"], df[["x_fovea","y_fovea"]], test_size=0.2, random_state=42)
     # createTrainVggValCSV(X_train,X_val, y_train,y_val, z_train,z_val,"VGG","imgPath", "x_fovea", "y_fovea", out_path)
-    createTrainValCSV(X_train,X_val,y_train,y_val,"VGG","imgPath","xy_fovea",out_path)
-    
-    
+    createTrainValCSV(X_train,X_val,y_train,y_val,"VGG","imgPath",["x_fovea","y_fovea"],out_path)
     
 def readJSON(json_path:str):
     try:
@@ -126,7 +124,10 @@ def readJSON(json_path:str):
         json_photos = []
     return json_photos
 
-def createTrainValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_val:pd.Series,csv_name:str,x_name:str,y_name:str,output_path:str):
+def createTrainValCSV(X_train:Union[pd.Series,pd.DataFrame],
+                      X_val:Union[pd.Series,pd.DataFrame], y_train:Union[pd.Series,pd.DataFrame], 
+                      y_val:Union[pd.Series,pd.DataFrame],csv_name:str,x_name:Union[str,List],
+                      y_name:Union[str,List],output_path:str):
     """Creates two csv's one for training and the other for validation
 
     Args:
@@ -139,9 +140,28 @@ def createTrainValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_v
         y_name (str): label name in csv for y_train/val
         output_path (str): path where the csv's are going to be saved
     """
-    pd.DataFrame({x_name: X_train.values, y_name:y_train.values}).to_csv(os.path.join(output_path,f"{csv_name}_train.csv"),index=False)
     
-    pd.DataFrame({x_name: X_val.values, y_name:y_val.values}).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)
+    val_dict = {}
+    train_dict = {}
+    
+    if isinstance(x_name,str):
+        train_dict = {x_name: X_train.values}
+        val_dict = {x_name: X_val.values}
+    else:
+        train_dict = { xi_name: X_train[xi_name].values for xi_name in x_name}
+        val_dict = {xi_name: X_val[xi_name].values for xi_name  in x_name}
+    
+    if isinstance(y_name,str):
+        train_dict[y_name] = y_train.values
+        val_dict[y_name] = y_val.values
+    else:
+        for yi_name in y_name:        
+            train_dict[yi_name] =  y_train[yi_name].values
+            val_dict[yi_name] =  y_val[yi_name].values
+            
+    pd.DataFrame(train_dict).to_csv(os.path.join(output_path,f"{csv_name}_train.csv"),index=False)
+    
+    pd.DataFrame(val_dict).to_csv(os.path.join(output_path,f"{csv_name}_val.csv"),index=False)
     
     
 # def createTrainVggValCSV(X_train:pd.Series, X_val:pd.Series, y_train:pd.Series, y_val:pd.Series,z_train:pd.Series, z_val:pd.Series,

@@ -108,5 +108,5 @@ def test_create_csv_bad_json_resnet(csv_generation,dir_path,json_name):
     assert train.shape[0] != 0
     
     images_readed = len(df["imgPath"].apply(lambda x: os.path.basename(x)).tolist())
-    test_images = len([os.path.basename(x) for x in glob(os.path.join(dir_path,"*"))])
+    test_images = len([os.path.basename(x) for x in glob(os.path.join(dir_path,"*.jpg"))])
     assert images_readed == test_images

@@ -61,37 +61,15 @@ class VGGDataset(Dataset):
 
     def __len__(self):
         return self.df.shape[0]
-
-    # def __getitem__(self, idx):
-    #     img_path = self.df.loc[idx, "imgPath"]
-    #     x_fovea, y_fovea = list(map(lambda x: float(x) ,self.df.loc[idx, "xy_fovea"].split("/")))
-    #     image = read_image(img_path)
-    #     if self.transform:
-    #         image = self.transform(image)
-    #     fovea_loc = torch.tensor([x_fovea, y_fovea]) #Para que se almecene en un formato compatible con Pytorch
-               
-    #     return image, fovea_loc
-    
     
     def __getitem__(self, idx):
         img_path = self.df.loc[idx, "imgPath"]
-        x_fovea, y_fovea = list(map(lambda x: float(x) ,self.df.loc[idx, "xy_fovea"].split("/")))
-        image = read_image(img_path)
-        fovea_loc = torch.tensor([x_fovea, y_fovea])
+        x_fovea, y_fovea = self.df.loc[idx, ["x_fovea","y_fovea"]]
+        fovea_loc = (x_fovea, y_fovea)
         if self.transform:
-            image_res, fovea_loc = self.transform(image, fovea_loc)
+            image_res, fovea_loc = self.transform(img_path, fovea_loc)
         
-        return image_res, fovea_loc
-    
-    
-  
-
-
-# def one_hot_encode(data):
-#     drop_enc = OneHotEncoder(drop='first').fit(data)
-#     drop_enc.categories_
-#     drop_enc.transform(data).toarray()
-#     return drop_enc
+        return image_res, torch.tensor(fovea_loc)    
     
     
 # if __name__ == "__main__":

@@ -51,10 +51,9 @@ class CustomTransformationVgg():
 
     def __call__(self, image_path, xy_fovea):
         
-        #image = cv2.imread(image_path)
+        image = cv2.imread(image_path)
         
-        
-        transformed = self.transform(image=image, keypoints=xy_fovea, class_labels=self.class_labels)
+        transformed = self.transform(image=image, keypoints=[xy_fovea], class_labels=self.class_labels)
         transformed_image = transformed['image']
         transformed_keypoints = transformed['keypoints']
     
