@@ -252,7 +252,7 @@ class VGGModel(pl.LightningModule):
 
         variance = torch.var(loss)
 
-        self.log("train_loss_step", loss.item(), prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_euclidean_distance_variance", variance, prog_bar=True, on_epoch=True, on_step=False)
         
         return loss
@@ -281,7 +281,7 @@ class VGGModel(pl.LightningModule):
         variance = torch.var(loss)
         # print(variance)
         
-        self.log("train_val_loss", loss.item(), prog_bar=True)
+        self.log("train_val_loss", loss, prog_bar=True)
         self.log("train_val_euclidean_distance_variance", variance, prog_bar=True)
 
         return loss
@@ -311,7 +311,7 @@ class VGGModel(pl.LightningModule):
 
         variance = torch.var(loss)
 
-        self.log("train_test_loss", loss.item())
+        self.log("train_test_loss", loss)
         self.log("train_test_euclidean_distance_variance", variance)
         
         return loss
