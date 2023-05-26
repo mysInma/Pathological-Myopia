@@ -98,7 +98,7 @@ class VGG19TF(nn.Module):
         self.relu_fc2_3 = nn.ReLU()
         
         
-    def init_input_layer(self,image_size=896):
+    def init_input_layer(self,img_size=896):
         # exp_img_size = math.log(image_size)
         # exp_img_size_dest = math.log2(224)
         arch_layers = []
@@ -237,17 +237,26 @@ class VGGModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
-        yhat = torch.sigmoid(logits) * (self.model.img_size-1)
+        y.requires_grad = True  # Establecer requires_grad=True
+        # yhat = torch.sigmoid(logits) * (self.model.img_size-1)
         y = torch.squeeze(y, dim=1)
-        loss = pairwise_euclidean_distance( yhat, y , reduction = 'mean')
-        print(loss)
+        
+        # Separa las coordenadas x e y
+        x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
+
+        # Calcula la distancia euclidiana entre los tensores
+        distances = torch.cdist(x_coords.to(torch.float32), y_coords.to(torch.float32))
+        
+        # Calcula la distancia euclidiana promedio
+        loss = torch.mean(distances)
 
         variance = torch.var(loss)
 
-        self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_loss_step", loss.item(), prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_euclidean_distance_variance", variance, prog_bar=True, on_epoch=True, on_step=False)
         
         return loss
+    
     
     def training_epoch_end(self, training_step_outputs):
         self.log("step",self.current_epoch)
@@ -256,40 +265,57 @@ class VGGModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x,y = batch
         logits = self(x)
-        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
+        y.requires_grad = True  # Establecer requires_grad=True
+        #yhat = torch.sigmoid(logits)* (self.model.img_size-1)
         y = torch.squeeze(y, dim=1)
 
-        loss = pairwise_euclidean_distance( yhat, y , reduction = 'mean') 
+       # Separa las coordenadas x e y
+        x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
         
+        # Calcula la distancia euclidiana entre los tensores
+        distances = torch.cdist(x_coords.to(torch.float32), y_coords.to(torch.float32))
+        
+        # Calcula la distancia euclidiana promedio
+        loss = torch.mean(distances)
+
         variance = torch.var(loss)
-        print(variance)
-
+        # print(variance)
         
-        self.log("train_val_loss", loss, prog_bar=True)
+        self.log("train_val_loss", loss.item(), prog_bar=True)
         self.log("train_val_euclidean_distance_variance", variance, prog_bar=True)
-
 
         return loss
   
+  
     def validation_epoch_end(self, validation_step_outputs):
-        self.log("step",self.current_epoch)
+        #self.log("step",self.current_epoch)
+        step = torch.tensor(self.current_epoch, dtype=torch.float32)
+        self.log("step", step.item())
   
       
     def test_step(self,batch,batch_idx):
         x,y = batch
         logits = self(x)
-        yhat = torch.sigmoid(logits)
+        y.requires_grad = True  # Establecer requires_grad=True
+        # yhat = torch.sigmoid(logits)
         y = torch.squeeze(y, dim=1)
-        loss = pairwise_euclidean_distance( yhat, y , reduction = 'mean')
+                
+        # Separa las coordenadas x e y
+        x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
+
+        # Calcula la distancia euclidiana entre los tensores
+        distances = torch.cdist(x_coords.to(torch.float32), y_coords.to(torch.float32))
+         
+        # Calcula la distancia euclidiana promedio
+        loss = torch.mean(distances)
 
         variance = torch.var(loss)
 
-
-        self.log("train_test_loss", loss)
+        self.log("train_test_loss", loss.item())
         self.log("train_test_euclidean_distance_variance", variance)
         
-        
         return loss
+    
         
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
@@ -310,7 +336,6 @@ if __name__ == '__main__':
     from models.vgg19 import VGG19TF
     from pytorch_lightning import Trainer
     from pytorch_lightning.callbacks.progress import TQDMProgressBar
-    from torchmetrics.functional import accuracy
     import torch
     from torch.utils.data import DataLoader
     
