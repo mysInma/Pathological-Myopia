@@ -9,8 +9,6 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torchmetrics.functional import pairwise_euclidean_distance
 
-
-
 class VGG19TF(nn.Module):
     def __init__(self, img_size):
         super(VGG19TF, self).__init__()
@@ -235,28 +233,30 @@ class VGGModel(pl.LightningModule):
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
-        x, y = batch
+        x,y = batch
         logits = self(x)
-        y.requires_grad = True  # Establecer requires_grad=True
-        # yhat = torch.sigmoid(logits) * (self.model.img_size-1)
+        # y.requires_grad = True  # Establecer requires_grad=True
+        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
         y = torch.squeeze(y, dim=1)
-        
-        # Separa las coordenadas x e y
-        x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
 
+       # Separa las coordenadas x e y
+        # x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
+        
         # Calcula la distancia euclidiana entre los tensores
-        distances = torch.cdist(x_coords.to(torch.float32), y_coords.to(torch.float32))
+        loss = torch.pairwise_distance(y,yhat)
+        # loss = torch.diagonal(loss)
         
         # Calcula la distancia euclidiana promedio
-        loss = torch.mean(distances)
+        # loss = torch.mean(distances)
 
         variance = torch.var(loss)
-
-        self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
-        self.log("train_euclidean_distance_variance", variance, prog_bar=True, on_epoch=True, on_step=False)
+        mean = torch.mean(loss)
+        # print(variance)
         
-        return loss
-    
+        self.log("train_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
+        
+        return mean
     
     def training_epoch_end(self, training_step_outputs):
         self.log("step",self.current_epoch)
@@ -265,26 +265,28 @@ class VGGModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x,y = batch
         logits = self(x)
-        y.requires_grad = True  # Establecer requires_grad=True
-        #yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        y = torch.squeeze(y, dim=1)
+        # y.requires_grad = True  # Establecer requires_grad=True
+        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
+        # y = torch.squeeze(y, dim=1)
 
        # Separa las coordenadas x e y
-        x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
+        # x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
         
         # Calcula la distancia euclidiana entre los tensores
-        distances = torch.cdist(x_coords.to(torch.float32), y_coords.to(torch.float32))
+        loss = torch.pairwise_distance(y,yhat)
+        # loss = torch.diagonal(loss)
         
         # Calcula la distancia euclidiana promedio
-        loss = torch.mean(distances)
+        # loss = torch.mean(distances)
 
         variance = torch.var(loss)
+        mean = loss.mean()
         # print(variance)
         
-        self.log("train_val_loss", loss, prog_bar=True)
-        self.log("train_val_euclidean_distance_variance", variance, prog_bar=True)
+        self.log("val_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("val_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
 
-        return loss
+        return mean
   
   
     def validation_epoch_end(self, validation_step_outputs):
@@ -363,16 +365,16 @@ if __name__ == '__main__':
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=1000,
         callbacks=[TQDMProgressBar(),
-                   EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
+                   EarlyStopping(monitor="val_loss",mode="min",patience=3),
                    ModelCheckpoint(dirpath="./model-checkpoint-VGG19/",\
-                    filename="vgg-{epoch}-{train_val_acc:.2f}",
+                    filename="vgg-{epoch}-{val_loss:.2f}",
                     save_top_k=2,
-                    monitor="train_val_loss")],
-        log_every_n_steps=40,
+                    monitor="val_loss")],
+        log_every_n_steps=1,
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
     #test_loader = train_loader
 
     miopia_model = VGGModel(config)
-    trainer.fit(miopia_model, train_loader,val_loader)
+    trainer.fit(miopia_model, train_loader,train_loader)

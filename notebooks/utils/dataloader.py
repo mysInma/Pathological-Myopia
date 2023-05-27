@@ -69,7 +69,7 @@ class VGGDataset(Dataset):
         if self.transform:
             image_res, fovea_loc = self.transform(img_path, fovea_loc)
         
-        return image_res, torch.tensor(fovea_loc)    
+        return image_res, torch.tensor(fovea_loc[0])    
     
     
 # if __name__ == "__main__":
