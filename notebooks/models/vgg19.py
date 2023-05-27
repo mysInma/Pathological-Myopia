@@ -235,23 +235,13 @@ class VGGModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x,y = batch
         logits = self(x)
-        # y.requires_grad = True  # Establecer requires_grad=True
         yhat = torch.sigmoid(logits)* (self.model.img_size-1)
         y = torch.squeeze(y, dim=1)
 
-       # Separa las coordenadas x e y
-        # x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
-        
         # Calcula la distancia euclidiana entre los tensores
         loss = torch.pairwise_distance(y,yhat)
-        # loss = torch.diagonal(loss)
-        
-        # Calcula la distancia euclidiana promedio
-        # loss = torch.mean(distances)
-
         variance = torch.var(loss)
         mean = torch.mean(loss)
-        # print(variance)
         
         self.log("train_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
         self.log("train_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
@@ -265,20 +255,11 @@ class VGGModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x,y = batch
         logits = self(x)
-        # y.requires_grad = True  # Establecer requires_grad=True
         yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        # y = torch.squeeze(y, dim=1)
-
-       # Separa las coordenadas x e y
-        # x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
         
         # Calcula la distancia euclidiana entre los tensores
         loss = torch.pairwise_distance(y,yhat)
-        # loss = torch.diagonal(loss)
         
-        # Calcula la distancia euclidiana promedio
-        # loss = torch.mean(distances)
-
         variance = torch.var(loss)
         mean = loss.mean()
         # print(variance)
@@ -290,33 +271,26 @@ class VGGModel(pl.LightningModule):
   
   
     def validation_epoch_end(self, validation_step_outputs):
-        #self.log("step",self.current_epoch)
-        step = torch.tensor(self.current_epoch, dtype=torch.float32)
-        self.log("step", step.item())
+        self.log("step",self.current_epoch)
+        # step = torch.tensor(self.current_epoch, dtype=torch.float32)
+        # self.log("step", step.item())
   
       
     def test_step(self,batch,batch_idx):
         x,y = batch
         logits = self(x)
-        y.requires_grad = True  # Establecer requires_grad=True
-        # yhat = torch.sigmoid(logits)
+        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
         y = torch.squeeze(y, dim=1)
-                
-        # Separa las coordenadas x e y
-        x_coords, y_coords = torch.split(y, split_size_or_sections=1, dim=1)
 
         # Calcula la distancia euclidiana entre los tensores
-        distances = torch.cdist(x_coords.to(torch.float32), y_coords.to(torch.float32))
-         
-        # Calcula la distancia euclidiana promedio
-        loss = torch.mean(distances)
-
+        loss = torch.pairwise_distance(y,yhat)
         variance = torch.var(loss)
-
-        self.log("train_test_loss", loss)
-        self.log("train_test_euclidean_distance_variance", variance)
+        mean = torch.mean(loss)
         
-        return loss
+        self.log("train_test_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_test_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
+        
+        return mean
     
         
     def configure_optimizers(self):
@@ -377,4 +351,4 @@ if __name__ == '__main__':
     #test_loader = train_loader
 
     miopia_model = VGGModel(config)
-    trainer.fit(miopia_model, train_loader,train_loader)
+    trainer.fit(miopia_model, train_loader,val_loader)
