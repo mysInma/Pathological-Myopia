@@ -227,6 +227,7 @@ class VGGModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(config)
         self.model = VGG19TF(img_size=self.hparams.img_size)
+        self.lista = {0:[]}
 
         
     def forward(self, x):
@@ -234,62 +235,46 @@ class VGGModel(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         x,y = batch
-        logits = self(x)
+        logits = self.model(x)
         yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        y = torch.squeeze(y, dim=1)
+        # y = torch.squeeze(y, dim=1)
 
         # Calcula la distancia euclidiana entre los tensores
-        loss = torch.pairwise_distance(y,yhat)
+        loss = F.pairwise_distance(y,yhat)
         variance = torch.var(loss)
         mean = torch.mean(loss)
         
-        self.log("train_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
-        self.log("train_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_loss",mean)
+        self.log("train_variance", variance)
         
         return mean
     
-    def training_epoch_end(self, training_step_outputs):
-        self.log("step",self.current_epoch)
+    # def training_epoch_end(self, training_step_outputs):
+    #     self.log("step",self.current_epoch)
         
         
     def validation_step(self, batch, batch_idx):
         x,y = batch
-        logits = self(x)
+        logits = self.model(x)
         yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        y = torch.squeeze(y, dim=1)
+        # y = torch.squeeze(y, dim=1)
 
         # Calcula la distancia euclidiana entre los tensores
-        loss = torch.pairwise_distance(y,yhat)
+        loss = F.pairwise_distance(y,yhat)
         variance = torch.var(loss)
         mean = torch.mean(loss)
         
-        self.log("val_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
-        self.log("val_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
-        
-        return mean
+        self.log("val_loss",mean)
+        self.log("val_variance", variance)
+        # return {"val_loss":mean,"val_variance":variance}
+        # return mean
   
   
-    def validation_epoch_end(self, validation_step_outputs):
-        self.log("step",self.current_epoch)
+    # def validation_epoch_end(self, validation_step_outputs):
+    #     self.lista[self.current_epoch+1] = []
+        # self.log("step",self.current_epoch)
         # step = torch.tensor(self.current_epoch, dtype=torch.float32)
         # self.log("step", step.item())
-  
-      
-    def test_step(self,batch,batch_idx):
-        x,y = batch
-        logits = self(x)
-        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        y = torch.squeeze(y, dim=1)
-
-        # Calcula la distancia euclidiana entre los tensores
-        loss = torch.pairwise_distance(y,yhat)
-        variance = torch.var(loss)
-        mean = torch.mean(loss)
-        
-        self.log("train_test_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
-        self.log("train_test_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
-        
-        return mean
     
         
     def configure_optimizers(self):
@@ -332,18 +317,18 @@ if __name__ == '__main__':
 
     # Initialize a trainer
     trainer = Trainer(
-        accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
+        # accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
         #deterministic=True,
         accelerator="gpu",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
-        max_epochs=1000,
+        max_epochs=8,
         callbacks=[TQDMProgressBar(),
-                   EarlyStopping(monitor="val_loss",mode="min",patience=3),
+                #    EarlyStopping(monitor="val_loss",mode="min",patience=3),
                    ModelCheckpoint(dirpath="./model-checkpoint-VGG19/",\
                     filename="vgg-{epoch}-{val_loss:.2f}",
                     save_top_k=2,
                     monitor="val_loss")],
-        log_every_n_steps=1,
+        # log_every_n_steps=1,
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
@@ -351,3 +336,4 @@ if __name__ == '__main__':
 
     miopia_model = VGGModel(config)
     trainer.fit(miopia_model, train_loader,val_loader)
+    print("pepe")
