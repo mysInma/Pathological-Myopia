@@ -165,3 +165,4 @@ notebooks/models/model-checkpoint
 *.onnx
 *.ckpt
 *.ipynb
+*.ipynb_checkpoints
