@@ -256,17 +256,16 @@ class VGGModel(pl.LightningModule):
         x,y = batch
         logits = self(x)
         yhat = torch.sigmoid(logits)* (self.model.img_size-1)
-        
+        y = torch.squeeze(y, dim=1)
+
         # Calcula la distancia euclidiana entre los tensores
         loss = torch.pairwise_distance(y,yhat)
-        
         variance = torch.var(loss)
-        mean = loss.mean()
-        # print(variance)
+        mean = torch.mean(loss)
         
         self.log("val_loss",mean,prog_bar=True,on_epoch=True,on_step=False)
         self.log("val_variance", variance,prog_bar=True,on_epoch=True,on_step=False)
-
+        
         return mean
   
   
