@@ -163,3 +163,5 @@ data/*
 notebooks/models/lightning_logs
 notebooks/models/model-checkpoint
 *.onnx
+*.ckpt
+*.ipynb

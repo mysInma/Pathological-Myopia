@@ -258,7 +258,7 @@ class SegmentationModel(pl.LightningModule):
         # self.model.encoder.features = self.model.encoder.features.to(self.device)
         self.accuracy = Accuracy(task="binary")
         self.auc =  BinaryAUROC()
-        self.recall = BinaryRecall(average="macro") 
+       # self.recall = BinaryRecall(average="macro") 
         
     def forward(self, x):
         return self.model(x)
@@ -274,7 +274,7 @@ class SegmentationModel(pl.LightningModule):
       self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
       self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
+      #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
       return loss
@@ -292,7 +292,7 @@ class SegmentationModel(pl.LightningModule):
       self.log("train_val_loss", loss,prog_bar=True)
       self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
       self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
-      self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
+      #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
       return loss
   
@@ -310,7 +310,7 @@ class SegmentationModel(pl.LightningModule):
       self.log("train_test_loss", loss)
       self.log("train_test_acc", self.accuracy(logits, y))
       self.log("train_test_auroc", self.auc(yhat, y))
-      self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
+      #self.log("train_test_recall",self.recall(torch.argmax(yhat,dim=1),y))
 
       return loss
       
@@ -351,10 +351,10 @@ if __name__ == '__main__':
     # val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
     # val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
    
-    train_features = UNETDataset("./Unet_train.csv",CustomTransformationResUnet(config["img_size"]))
+    train_features = UNETDataset("../datasets/resunet/Unet_train.csv",CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = UNETDataset("./Unet_val.csv",CustomTransformationResUnet(config["img_size"]))
+    val_dataset = UNETDataset("../datasets/resunet/Unet_val.csv",CustomTransformationResUnet(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
@@ -366,7 +366,7 @@ if __name__ == '__main__':
         max_epochs=1000,
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                   ModelCheckpoint(dirpath="./model-checkpoint-resUNET/",\
+                   ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
                     filename="resunet-{epoch}-{train_val_acc:.2f}",
                     save_top_k=2,
                     monitor="train_val_loss")],

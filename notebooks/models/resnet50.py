@@ -161,10 +161,10 @@ if __name__ == '__main__':
     
     
     pl.seed_everything(42,workers=True)
-    train_features = ResnetDataset("../train_resnet50/resnet_train.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
+    train_features = ResnetDataset("../datasets/resnet50/Experiment_2/resnet_train.csv","../../resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = ResnetDataset("../train_resnet50/resnet_val.csv","../../train_resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
+    val_dataset = ResnetDataset("../datasets/resnet50/Experiment_2/resnet_val.csv","../../resnet50/",transform=CustomTransformationResUnet(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
@@ -176,7 +176,7 @@ if __name__ == '__main__':
         max_epochs=1000,
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                   ModelCheckpoint(dirpath="./new-model-checkpoint/",\
+                   ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resnet50/",\
                     filename="resnet50H-{epoch}-{train_val_acc:.2f}",
                     save_top_k=2,
                     monitor="train_val_loss")],
