@@ -9,6 +9,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 
+
 class ConvBlock(nn.Module):
   def __init__(self, input_channel, mid_channels):
     super().__init__()
@@ -125,19 +126,19 @@ class EfficientResUNET(nn.Module):
         
         # lv1
         self.e1 = ConvBlock(3,64)
-        self.e11 = ConvBlock(64,64)
+        # self.e11 = ConvBlock(64,64)
         self.e1_res_block = Encoder_residual_block(64,64)
         self.e1_down = MaxPool2d(2)
         
         #lv2
         self.e2 = ConvBlock(64,128)
-        self.e22 = ConvBlock(128,128)
+        # self.e22 = ConvBlock(128,128)
         self.e2_res_block = Encoder_residual_block(128,128)
         self.e2_down = MaxPool2d(2)
         
         #lv3
         self.e3 = ConvBlock(128,256)
-        self.e33 = ConvBlock(256,256)
+        # self.e33 = ConvBlock(256,256)
         self.e3_res_block = Encoder_residual_block(256,256)
         self.e3_down = MaxPool2d(2)
         
@@ -147,12 +148,12 @@ class EfficientResUNET(nn.Module):
         
         #lv3
         self.d3 = ConvBlock(512,256)
-        self.d33 = ConvBlock(256,256)
+        # self.d33 = ConvBlock(256,256)
         self.d3_res_block = Decoder_residual_block(256,128)
         
         #lv2
         self.d2 = ConvBlock(256,128)
-        self.d22 = ConvBlock(128,128)
+        # self.d22 = ConvBlock(128,128)
         self.d2_res_block = Decoder_residual_block(128,64)
         
         #lv1
@@ -166,19 +167,19 @@ class EfficientResUNET(nn.Module):
         
         #lv1
         x = self.e1(x)
-        x = self.e11(x)
+        # x = self.e11(x)
         x_f1 = self.e1_res_block(x)
         x = self.e1_down(x_f1)
         
         #lv2
         x = self.e2(x)
-        x = self.e22(x)
+        # x = self.e22(x)
         x_f2 = self.e2_res_block(x)
         x = self.e2_down(x_f2)
         
         #lv3
         x = self.e3(x)
-        x = self.e33(x)
+        # x = self.e33(x)
         x_f3 = self.e3_res_block(x)
         x = self.e3_down(x_f3)
         
@@ -190,19 +191,21 @@ class EfficientResUNET(nn.Module):
         # lv3
         x = torch.cat([x,x_f3],dim=1)
         x = self.d3(x)
-        x = self.d33(x)
+        # x = self.d33(x)
         x = self.d3_res_block(x)
         
         # lv2
         x = torch.cat([x,x_f2],dim=1)
         x = self.d2(x)
-        x = self.d22(x)
+        # x = self.d22(x)
         x = self.d2_res_block(x)
         
         # lv1
         x = torch.cat([x,x_f1],dim=1)
         x = self.d1(x)
         x = self.d11(x)
+        
+        del x_f1,x_f2,x_f3
         
         return x
 
@@ -220,7 +223,7 @@ class SegmentationModel(pl.LightningModule):
         self.model = EfficientResUNET()
         # self.model.encoder.features = self.model.encoder.features.to(self.device)
         self.accuracy = Accuracy(task="binary")
-        self.auc =  BinaryAUROC()
+        # self.auc =  BinaryAUROC()
        # self.recall = BinaryRecall(average="macro") 
         
     def forward(self, x):
@@ -236,7 +239,7 @@ class SegmentationModel(pl.LightningModule):
       
       self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
       self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+    #   self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
@@ -254,7 +257,7 @@ class SegmentationModel(pl.LightningModule):
         
       self.log("train_val_loss", loss,prog_bar=True)
       self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+    #   self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
       return loss
@@ -276,14 +279,21 @@ if __name__ == '__main__':
     from pytorch_lightning.callbacks.progress import TQDMProgressBar
     import torch
     from torch.utils.data import DataLoader
+    from utils.createCSV import unetCSV
+    from pytorch_lightning import loggers as pl_loggers
     
     config = {
-        "batch_size":4,
+        "batch_size":2,
         "img_size":512,
-        "num_workers":4,
+        "num_workers":2,
         "lr":1e-3,
     }
     
+    
+    unetCSV("../../data/PALM-Training400",
+            "../../data/PALM-Training400-Annotation-D&F/Disc_Masks",
+            "../utils/customDataVgg.json",
+            "../datasets/efficient_resunet/")
     
     pl.seed_everything(42,workers=True)
     # train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
@@ -292,10 +302,10 @@ if __name__ == '__main__':
     # val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
     # val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
    
-    train_features = UNETDataset("../datasets/resunet/Unet_train.csv",CustomTransformationResUnet(config["img_size"]))
+    train_features = UNETDataset("../datasets/efficient_resunet/Unet_train.csv",CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = UNETDataset("../datasets/resunet/Unet_val.csv",CustomTransformationResUnet(config["img_size"]))
+    val_dataset = UNETDataset("../datasets/efficient_resunet/Unet_val.csv",CustomTransformationResUnet(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
@@ -305,13 +315,17 @@ if __name__ == '__main__':
         accelerator="gpu",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=1000,
+        min_epochs=10,
+        logger=pl_loggers.TensorBoardLogger("../logs/lightning_logs/efficient_resunet"),
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                   ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
-                    filename="resunet-{epoch}-{train_val_acc:.2f}",
-                    save_top_k=2,
-                    monitor="train_val_loss")],
-        log_every_n_steps=40,
+                #    ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
+                #     filename="resunet-{epoch}-{train_val_acc:.2f}",
+                #     save_top_k=2,
+                #     monitor="train_val_loss")],
+        ]
+        # log_every_n_steps=40,
+        
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
