@@ -245,8 +245,6 @@ class ResUNET(nn.Module):
     x = self.intermediate(x,self.encoder.features)
     x = self.decoder(x,self.encoder.features)
     del self.encoder.features
-    torch.cuda.empty_cache()
-    gc.collect()
     return x
     
 # define the LightningModule
@@ -289,9 +287,9 @@ class SegmentationModel(pl.LightningModule):
       yhat = torch.sigmoid(logits)
       loss = F.binary_cross_entropy(yhat, y.float())
         
-      self.log("train_val_loss", loss,prog_bar=True)
-      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+      self.log("train_val_loss", loss,prog_bar=True, on_epoch=True, on_step=False)
+      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True, on_epoch=True, on_step=False)
+      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True, on_step=False)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
       return loss
@@ -335,9 +333,11 @@ if __name__ == '__main__':
     from torchmetrics.functional import accuracy
     import torch
     from torch.utils.data import DataLoader
+    from pytorch_lightning import loggers as pl_loggers
+    
     
     config = {
-        "batch_size":4,
+        "batch_size":2,
         "img_size":256,
         "num_workers":4,
         "lr":1e-3,
@@ -371,6 +371,7 @@ if __name__ == '__main__':
                     save_top_k=2,
                     monitor="train_val_loss")],
         log_every_n_steps=40,
+        logger = pl_loggers.TensorBoardLogger(save_dir="../logs/lightning_logs/resunet")
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
