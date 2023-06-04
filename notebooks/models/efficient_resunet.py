@@ -1,5 +1,5 @@
 import pytorch_lightning as pl
-import torch
+from torch import Tensor
 from torch import optim, nn
 from torch.nn import functional as F
 from torchmetrics import Accuracy   
@@ -126,19 +126,19 @@ class EfficientResUNET(nn.Module):
         
         # lv1
         self.e1 = ConvBlock(3,64)
-        # self.e11 = ConvBlock(64,64)
+        self.e11 = ConvBlock(64,64)
         self.e1_res_block = Encoder_residual_block(64,64)
         self.e1_down = MaxPool2d(2)
         
         #lv2
         self.e2 = ConvBlock(64,128)
-        # self.e22 = ConvBlock(128,128)
+        self.e22 = ConvBlock(128,128)
         self.e2_res_block = Encoder_residual_block(128,128)
         self.e2_down = MaxPool2d(2)
         
         #lv3
         self.e3 = ConvBlock(128,256)
-        # self.e33 = ConvBlock(256,256)
+        self.e33 = ConvBlock(256,256)
         self.e3_res_block = Encoder_residual_block(256,256)
         self.e3_down = MaxPool2d(2)
         
@@ -148,12 +148,12 @@ class EfficientResUNET(nn.Module):
         
         #lv3
         self.d3 = ConvBlock(512,256)
-        # self.d33 = ConvBlock(256,256)
+        self.d33 = ConvBlock(256,256)
         self.d3_res_block = Decoder_residual_block(256,128)
         
         #lv2
         self.d2 = ConvBlock(256,128)
-        # self.d22 = ConvBlock(128,128)
+        self.d22 = ConvBlock(128,128)
         self.d2_res_block = Decoder_residual_block(128,64)
         
         #lv1
@@ -167,19 +167,19 @@ class EfficientResUNET(nn.Module):
         
         #lv1
         x = self.e1(x)
-        # x = self.e11(x)
+        x = self.e11(x)
         x_f1 = self.e1_res_block(x)
         x = self.e1_down(x_f1)
         
         #lv2
         x = self.e2(x)
-        # x = self.e22(x)
+        x = self.e22(x)
         x_f2 = self.e2_res_block(x)
         x = self.e2_down(x_f2)
         
         #lv3
         x = self.e3(x)
-        # x = self.e33(x)
+        x = self.e33(x)
         x_f3 = self.e3_res_block(x)
         x = self.e3_down(x_f3)
         
@@ -191,13 +191,13 @@ class EfficientResUNET(nn.Module):
         # lv3
         x = torch.cat([x,x_f3],dim=1)
         x = self.d3(x)
-        # x = self.d33(x)
+        x = self.d33(x)
         x = self.d3_res_block(x)
         
         # lv2
         x = torch.cat([x,x_f2],dim=1)
         x = self.d2(x)
-        # x = self.d22(x)
+        x = self.d22(x)
         x = self.d2_res_block(x)
         
         # lv1
@@ -223,7 +223,8 @@ class SegmentationModel(pl.LightningModule):
         self.model = EfficientResUNET()
         # self.model.encoder.features = self.model.encoder.features.to(self.device)
         self.accuracy = Accuracy(task="binary")
-        # self.auc =  BinaryAUROC()
+        self.auc =  BinaryAUROC()
+        self.criterion = nn.BCEWithLogitsLoss()
        # self.recall = BinaryRecall(average="macro") 
         
     def forward(self, x):
@@ -235,11 +236,12 @@ class SegmentationModel(pl.LightningModule):
       # y = y.to(self.device)
       logits = self(x)
       yhat = torch.sigmoid(logits)
-      loss = F.binary_cross_entropy(yhat, y.float())
+      loss = F.binary_cross_entropy(yhat, y)
+      loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
       
       self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
       self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-    #   self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
     
@@ -253,11 +255,12 @@ class SegmentationModel(pl.LightningModule):
       x,y = batch
       logits = self(x)
       yhat = torch.sigmoid(logits)
-      loss = F.binary_cross_entropy(yhat, y.float())
+      loss = F.binary_cross_entropy(yhat, y)
+      loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
         
       self.log("train_val_loss", loss,prog_bar=True)
       self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-    #   self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
       return loss
@@ -268,6 +271,17 @@ class SegmentationModel(pl.LightningModule):
     def configure_optimizers(self):
       optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
       return optimizer
+    
+    def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
+    # Average of Dice coefficient for all batches, or for a single mask
+      sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1, -2, -3)
+
+      inter = 2 * (input * target).sum(dim=sum_dim)
+      sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim)
+      sets_sum = torch.where(sets_sum == 0, inter, sets_sum)
+
+      dice = (inter + epsilon) / (sets_sum + epsilon)
+      return dice.mean()
   
 
 if __name__ == '__main__':
