@@ -229,7 +229,7 @@ class SegmentationModel(pl.LightningModule):
        
         self.train_loss_list = []
         self.train_acc_list = []
-        self.train_auc_list = []
+        self.train_auroc_list = []
         
         self.avg_train_loss_list = []
         self.avg_train_acc_list = []
@@ -266,7 +266,7 @@ class SegmentationModel(pl.LightningModule):
       
       self.train_loss_list.append(loss.item())
       self.train_acc_list.append(self.accuracy(yhat, y).item())
-      self.train_auc_list.append(self.auc(yhat, y).item())
+      self.train_auroc_list.append(self.auc(yhat, y).item())
       
       return loss
     
@@ -283,7 +283,7 @@ class SegmentationModel(pl.LightningModule):
       
       self.avg_train_loss_list.append(avg_loss.item())
       self.avg_train_acc_list.append(avg_acc.item())
-      self.avg_train_auc_list.append(avg_auc.item())
+      self.avg_train_auroc_list.append(avg_auc.item())
     
     
       self.log("step",self.current_epoch)
