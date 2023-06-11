@@ -286,7 +286,7 @@ class SegmentationModel(pl.LightningModule):
       self.avg_train_auroc_list.append(avg_auc.item())
     
     
-      self.log("step",self.current_epoch)
+      #self.log("step",self.current_epoch)
         
         
     def validation_step(self, batch, batch_idx):
@@ -321,7 +321,7 @@ class SegmentationModel(pl.LightningModule):
       self.val_acc_list.clear()
       self.val_auroc_list.clear()
       
-      self.log("step",self.current_epoch)
+      #self.log("step",self.current_epoch)
       
     def configure_optimizers(self):
       optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
@@ -383,11 +383,11 @@ if __name__ == '__main__':
         min_epochs=10,
         logger=pl_loggers.TensorBoardLogger("../logs/lightning_logs/efficient_resunet"),
         callbacks=[TQDMProgressBar(),
-                   EarlyStopping(monitor="val_loss_list",mode="min",patience=3),
+                   EarlyStopping(monitor="avg_val_loss_list",mode="min",patience=3),
                     ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
                      filename="resunet-{epoch}-{train_val_acc:.2f}",
                      save_top_k=2,
-                     monitor="val_loss_list")],
+                     monitor="avg_val_loss_list)")],
         
         log_every_n_steps=40,
         
