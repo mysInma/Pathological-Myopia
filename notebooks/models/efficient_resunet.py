@@ -226,11 +226,30 @@ class SegmentationModel(pl.LightningModule):
         self.auc =  BinaryAUROC()
         self.criterion = nn.BCEWithLogitsLoss()
        # self.recall = BinaryRecall(average="macro") 
+       
+        self.train_loss_list = []
+        self.train_acc_list = []
+        self.train_auroc_list = []
         
+        self.val_loss_list = []
+        self.val_acc_list = []
+        self.val_auroc_list = []
+        
+        
+        self.avg_train_loss_list = []
+        self.avg_train_acc_list = []
+        self.avg_train_auroc_list = []
+        
+          
+        self.avg_val_loss_list = []
+        self.avg_val_acc_list = []
+        self.avg_val_auroc_list = []
+          
     def forward(self, x):
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
+    
       x, y = batch
       # x = x.to(self.device)
       # y = y.to(self.device)
@@ -239,33 +258,67 @@ class SegmentationModel(pl.LightningModule):
       loss = F.binary_cross_entropy(yhat, y)
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
       
-      self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      # self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
+      # self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      # self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
+      
+      self.train_loss_list.append(loss)
+      self.train_acc_list.append(self.accuracy(yhat, y))
+      self.train_auroc_list.append(self.auc(yhat, y))
     
       return loss
     
     def training_epoch_end(self, training_step_outputs):
-        self.log("step",self.current_epoch)
+      avg_train_loss = torch.tensor(self.train_loss_list).mean()
+      avg_train_acc = torch.tensor(self.train_acc_list).mean()
+      avg_train_auroc = torch.tensor(self.train_auroc_list).mean()
+
+      self.avg_train_loss_list.append(avg_train_loss)
+      self.avg_train_acc_list.append(avg_train_acc)
+      self.avg_train_auroc_list.append(avg_train_auroc)
+
+      self.train_loss_list.clear()
+      self.train_acc_list.clear()
+      self.train_auroc_list.clear()
+    
+      self.log("step",self.current_epoch)
         
         
     def validation_step(self, batch, batch_idx):
+      
       x,y = batch
       logits = self(x)
       yhat = torch.sigmoid(logits)
       loss = F.binary_cross_entropy(yhat, y)
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
         
-      self.log("train_val_loss", loss,prog_bar=True)
-      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+      # self.log("train_val_loss", loss,prog_bar=True)
+      # self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
+      # self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
+      
+      self.val_loss_list.append(loss)
+      self.val_acc_list.append(self.accuracy(logits, y))
+      self.val_auroc_list.append(self.auc(yhat, y))
 
       return loss
   
     def validation_epoch_end(self, validation_step_outputs):
+      avg_val_loss = torch.tensor(self.val_loss_list).mean()
+      avg_val_acc = torch.tensor(self.val_acc_list).mean()
+      avg_val_auroc = torch.tensor(self.val_auroc_list).mean()
+
+      self.avg_val_loss_list.append(avg_val_loss)
+      self.avg_val_acc_list.append(avg_val_acc)
+      self.avg_val_auroc_list.append(avg_val_auroc)
+
+      #Todos los elementos existentes en la lista son eliminados, y la lista queda vacía para la próxima época
+      self.val_loss_list.clear()
+      self.val_acc_list.clear()
+      self.val_auroc_list.clear()
+      
       self.log("step",self.current_epoch)
       
     def configure_optimizers(self):
@@ -304,17 +357,13 @@ if __name__ == '__main__':
     }
     
     
-    unetCSV("../../data/PALM-Training400",
-            "../../data/PALM-Training400-Annotation-D&F/Disc_Masks",
-            "../utils/customDataVgg.json",
-            "../datasets/efficient_resunet/")
+    # unetCSV("../../data/PALM-Training400",
+    #         "../../data/PALM-Training400-Annotation-D&F/Disc_Masks",
+    #         "../utils/customDataVgg.json",
+    #         "../datasets/efficient_resunet/")
     
     pl.seed_everything(42,workers=True)
-    # train_features = UNETDataset("../train_unet/Unet_train.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
-    # train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
-    
-    # val_dataset = UNETDataset("../train_unet/Unet_val.csv","../../train_unet/",transform=CustomTransformationResUnet(config["img_size"]))
-    # val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
+
    
     train_features = UNETDataset("../datasets/efficient_resunet/Unet_train.csv",CustomTransformationResUnet(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
@@ -333,12 +382,12 @@ if __name__ == '__main__':
         logger=pl_loggers.TensorBoardLogger("../logs/lightning_logs/efficient_resunet"),
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                #    ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
-                #     filename="resunet-{epoch}-{train_val_acc:.2f}",
-                #     save_top_k=2,
-                #     monitor="train_val_loss")],
-        ]
-        # log_every_n_steps=40,
+                    ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
+                     filename="resunet-{epoch}-{train_val_acc:.2f}",
+                     save_top_k=2,
+                     monitor="train_val_loss")],
+        
+        log_every_n_steps=40,
         
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
