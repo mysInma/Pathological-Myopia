@@ -275,7 +275,7 @@ class SegmentationModel(pl.LightningModule):
       # Calcula la media de los tensores
       avg_loss = torch.tensor(self.train_loss_list).mean()
       avg_acc = torch.tensor(self.train_acc_list).mean()
-      avg_auc = torch.tensor(self.train_auc_list).mean()
+      avg_auc = torch.tensor(self.train_auroc_list).mean()
 
       self.train_loss_list.clear()
       self.train_acc_list.clear()
