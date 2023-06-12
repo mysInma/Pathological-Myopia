@@ -375,7 +375,7 @@ if __name__ == '__main__':
                     ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
                      filename="resunet-{epoch}-{train_val_acc:.2f}",
                      save_top_k=2,
-                     monitor="train_val_loss)")],
+                     monitor="train_val_loss")],
         
         log_every_n_steps=40,
         
