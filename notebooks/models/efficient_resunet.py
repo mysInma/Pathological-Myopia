@@ -227,21 +227,16 @@ class SegmentationModel(pl.LightningModule):
         self.criterion = nn.BCEWithLogitsLoss()
        # self.recall = BinaryRecall(average="macro") 
        
-        self.train_loss_list = []
         self.train_acc_list = []
         self.train_auroc_list = []
         
-        self.avg_train_loss_list = []
         self.avg_train_acc_list = []
         self.avg_train_auroc_list = []
         
         
-        
-        self.val_loss_list = []
         self.val_acc_list = []
         self.val_auroc_list = []
           
-        self.avg_val_loss_list = []
         self.avg_val_acc_list = []
         self.avg_val_auroc_list = []
           
@@ -258,13 +253,13 @@ class SegmentationModel(pl.LightningModule):
       loss = F.binary_cross_entropy(yhat, y)
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
       
-      # self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
       # self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       # self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
       
-      self.train_loss_list.append(loss.item())
+
       self.train_acc_list.append(self.accuracy(yhat, y).item())
       self.train_auroc_list.append(self.auc(yhat, y).item())
       
@@ -273,15 +268,12 @@ class SegmentationModel(pl.LightningModule):
     def training_epoch_end(self, training_step_outputs):
       
       # Calcula la media de los tensores
-      avg_loss = torch.tensor(self.train_loss_list).mean()
       avg_acc = torch.tensor(self.train_acc_list).mean()
       avg_auc = torch.tensor(self.train_auroc_list).mean()
 
-      self.train_loss_list.clear()
       self.train_acc_list.clear()
       self.train_auroc_list.clear()
       
-      self.avg_train_loss_list.append(avg_loss.item())
       self.avg_train_acc_list.append(avg_acc.item())
       self.avg_train_auroc_list.append(avg_auc.item())
     
@@ -297,29 +289,25 @@ class SegmentationModel(pl.LightningModule):
       loss = F.binary_cross_entropy(yhat, y)
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
         
-      # self.log("train_val_loss", loss,prog_bar=True)
+      self.log("train_val_loss", loss,prog_bar=True)
       # self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
       # self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
         
-      self.val_loss_list.append(loss.item())
       self.val_acc_list.append(self.accuracy(logits, y).item())
       self.val_auroc_list.append(self.auc(yhat, y).item())
 
       return loss
   
     def validation_epoch_end(self, validation_step_outputs):
-      avg_val_loss = torch.tensor(self.val_loss_list).mean()
       avg_val_acc = torch.tensor(self.val_acc_list).mean()
       avg_val_auroc = torch.tensor(self.val_auroc_list).mean()
 
-      self.avg_val_loss_list.append(avg_val_loss.item())
-      self.avg_val_acc_list.append(avg_val_acc.item())
-      self.avg_val_auroc_list.append(avg_val_auroc.item())
-
-      self.val_loss_list.clear()
       self.val_acc_list.clear()
       self.val_auroc_list.clear()
+      
+      self.avg_val_acc_list.append(avg_val_acc.item())
+      self.avg_val_auroc_list.append(avg_val_auroc.item())
       
       #self.log("step",self.current_epoch)
       
@@ -383,11 +371,11 @@ if __name__ == '__main__':
         min_epochs=10,
         logger=pl_loggers.TensorBoardLogger("../logs/lightning_logs/efficient_resunet"),
         callbacks=[TQDMProgressBar(),
-                   EarlyStopping(monitor="avg_val_loss_list",mode="min",patience=3),
+                   EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
                     ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
                      filename="resunet-{epoch}-{train_val_acc:.2f}",
                      save_top_k=2,
-                     monitor="avg_val_loss_list)")],
+                     monitor="train_val_loss)")],
         
         log_every_n_steps=40,
         
