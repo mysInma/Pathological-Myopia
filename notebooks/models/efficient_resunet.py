@@ -227,16 +227,16 @@ class SegmentationModel(pl.LightningModule):
         self.criterion = nn.BCEWithLogitsLoss()
        # self.recall = BinaryRecall(average="macro")
 
-        self.loss_train_tensor = torch.Tensor() # Tensor para almacenar los valores de los steps
+        
+        self.loss_train_tensor = torch.Tensor()
         self.accuracy_train_tensor = torch.Tensor()  # Tensor para almacenar los valores de accuracy
         self.auroc_train_tensor = torch.Tensor()  # Tensor para almacenar los valores de auroc
 
-        self.loss_train_list = []  # Lista para almacenar los valores de loss
+        self.loss_train_list = []
         self.accuracy_train_list = []  # Lista para almacenar los valores de accuracy
         self.auroc_train_list = []  # Lista para almacenar los valores de auroc
         
-        
-        self.loss_val_tensor = torch.Tensor()
+        self.loss_val_tensor = torch.tensor()
         self.accuracy_val_tensor = torch.Tensor()
         self.auroc_val_tensor = torch.Tensor()
         
@@ -244,8 +244,7 @@ class SegmentationModel(pl.LightningModule):
         self.accuracy_val_list = []
         self.auroc_val_list = []
         
-
-
+        
     def forward(self, x):
         return self.model(x)
 
@@ -260,15 +259,15 @@ class SegmentationModel(pl.LightningModule):
       accuracy = self.accuracy(yhat, y)
       auroc = self.auc(yhat, y)
 
-      self.log("train_loss_step", loss,prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
       # self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       # self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
 
-      self.loss_train_tensor = torch.cat([self.loss_train_tensor, loss])
-      self.accuracy_train_tensor = torch.cat([self.accuracy_train_tensor, accuracy])
-      self.auroc_train_tensor = torch.cat([self.auroc_train_tensor, auroc])
+      self.loss_train_tensor = torch.cat([self.loss_train_tensor, loss.detach()])
+      self.accuracy_train_tensor = torch.cat([self.accuracy_train_tensor, accuracy.detach()])
+      self.auroc_train_tensor = torch.cat([self.auroc_train_tensor, auroc.detach()])
 
       return loss
 
@@ -303,7 +302,7 @@ class SegmentationModel(pl.LightningModule):
       loss = F.binary_cross_entropy(yhat, y)
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
 
-      self.log("train_val_loss", loss,prog_bar=True)
+      self.log("train_val_loss", loss, prog_bar=True,on_epoch=True,on_step=False)
       # self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
       # self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
@@ -311,9 +310,9 @@ class SegmentationModel(pl.LightningModule):
       accuracy_val = self.accuracy(logits, y)
       auroc_val = self.auc(yhat, y)
       
-      self.loss_val_tensor = torch.cat([self.loss_val_tensor, loss])
-      self.accuracy_val_tensor = torch.cat([self.accuracy_val_tensor, accuracy_val])
-      self.auroc_val_tensor = torch.cat([self.auroc_val_tensor, auroc_val])
+      self.loss_val_tensor = torch.cat([self.loss_val_tensor, loss.detach()])
+      self.accuracy_val_tensor = torch.cat([self.accuracy_val_tensor, accuracy_val.detach()])
+      self.auroc_val_tensor = torch.cat([self.auroc_val_tensor, auroc_val.detach()])
       
       return loss
 
