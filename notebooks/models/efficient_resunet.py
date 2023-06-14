@@ -236,7 +236,7 @@ class SegmentationModel(pl.LightningModule):
         self.accuracy_train_list = []  # Lista para almacenar los valores de accuracy
         self.auroc_train_list = []  # Lista para almacenar los valores de auroc
         
-        self.loss_val_tensor = torch.tensor()
+        self.loss_val_tensor = torch.Tensor()
         self.accuracy_val_tensor = torch.Tensor()
         self.auroc_val_tensor = torch.Tensor()
         
@@ -265,9 +265,9 @@ class SegmentationModel(pl.LightningModule):
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
 
-      self.loss_train_tensor = torch.cat([self.loss_train_tensor, loss.detach()])
-      self.accuracy_train_tensor = torch.cat([self.accuracy_train_tensor, accuracy.detach()])
-      self.auroc_train_tensor = torch.cat([self.auroc_train_tensor, auroc.detach()])
+      self.loss_train_tensor = loss.detach()
+      self.accuracy_train_tensor = accuracy.detach()
+      self.auroc_train_tensor = auroc.detach()
 
       return loss
 
@@ -310,9 +310,9 @@ class SegmentationModel(pl.LightningModule):
       accuracy_val = self.accuracy(logits, y)
       auroc_val = self.auc(yhat, y)
       
-      self.loss_val_tensor = torch.cat([self.loss_val_tensor, loss.detach()])
-      self.accuracy_val_tensor = torch.cat([self.accuracy_val_tensor, accuracy_val.detach()])
-      self.auroc_val_tensor = torch.cat([self.auroc_val_tensor, auroc_val.detach()])
+      self.loss_val_tensor = loss.detach()
+      self.accuracy_val_tensor = accuracy_val.detach()
+      self.auroc_val_tensor = auroc_val.detach()
       
       return loss
 
@@ -393,7 +393,7 @@ if __name__ == '__main__':
         logger=pl_loggers.TensorBoardLogger("../logs/lightning_logs/efficient_resunet"),
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
-                    ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-resUNET/",\
+                    ModelCheckpoint(dirpath="../logs/model-checkpoints/model-checkpoint-EfficientResUNET/",\
                      filename="resunet-{epoch}-{train_val_acc:.2f}",
                      save_top_k=2,
                      monitor="train_val_loss")],
