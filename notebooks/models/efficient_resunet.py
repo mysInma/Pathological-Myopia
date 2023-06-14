@@ -265,9 +265,11 @@ class SegmentationModel(pl.LightningModule):
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
 
-      self.loss_train_tensor = loss.detach()
-      self.accuracy_train_tensor = accuracy.detach()
-      self.auroc_train_tensor = auroc.detach()
+
+      #Aquí está el fallo
+      self.loss_train_tensor = loss
+      self.accuracy_train_tensor = accuracy
+      self.auroc_train_tensor = auroc
 
       return loss
 
@@ -275,9 +277,9 @@ class SegmentationModel(pl.LightningModule):
     def training_epoch_end(self, training_step_outputs): 
 
       # Calcula la media de los tensores
-      avg_loss = self.loss_train_tensor.mean().item()
-      avg_accuracy = self.accuracy_train_tensor.mean().item()
-      avg_auroc = self.auroc_train_tensor.mean().item()
+      avg_loss = self.loss_train_tensor.detach().mean().item()
+      avg_accuracy = self.accuracy_train_tensor.detach().mean().item()
+      avg_auroc = self.auroc_train_tensor.detach().mean().item()
 
       #Opción para llevarmelos a la cpu
       # avg_accuracy = self.accuracy_train_tensor.cpu().mean().item()
@@ -310,17 +312,17 @@ class SegmentationModel(pl.LightningModule):
       accuracy_val = self.accuracy(logits, y)
       auroc_val = self.auc(yhat, y)
       
-      self.loss_val_tensor = loss.detach()
-      self.accuracy_val_tensor = accuracy_val.detach()
-      self.auroc_val_tensor = auroc_val.detach()
+      self.loss_val_tensor = loss
+      self.accuracy_val_tensor = accuracy_val
+      self.auroc_val_tensor = auroc_val
       
       return loss
 
     def validation_epoch_end(self, validation_step_outputs):
       
-      avg_loss_val = self.loss_val_tensor.mean().item()
-      avg_accuracy_val = self.accuracy_val_tensor.mean().item()
-      avg_auroc_val = self.auroc_val_tensor.mean().item()
+      avg_loss_val = self.loss_val_tensor.detach().mean().item()
+      avg_accuracy_val = self.accuracy_val_tensor.detach().mean().item()
+      avg_auroc_val = self.auroc_val_tensor.detach().mean().item()
       
       self.loss_val_tensor = []
       self.accuracy_val_tensor = []
