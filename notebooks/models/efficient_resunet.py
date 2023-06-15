@@ -226,23 +226,6 @@ class SegmentationModel(pl.LightningModule):
         self.auc =  BinaryAUROC()
         self.criterion = nn.BCEWithLogitsLoss()
        # self.recall = BinaryRecall(average="macro")
-
-        
-        self.loss_train_tensor = []
-        self.accuracy_train_tensor = []  
-        self.auroc_train_tensor = []  
-
-        self.loss_train_list = []
-        self.accuracy_train_list = []  
-        self.auroc_train_list = []  
-        
-        self.loss_val_tensor = []
-        self.accuracy_val_tensor = []
-        self.auroc_val_tensor = []
-        
-        self.loss_val_list = []
-        self.accuracy_val_list = []
-        self.auroc_val_list = []
         
         
     def forward(self, x):
@@ -256,47 +239,21 @@ class SegmentationModel(pl.LightningModule):
       loss = F.binary_cross_entropy(yhat, y)
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
 
-      accuracy = self.accuracy(yhat, y)
-      auroc = self.auc(yhat, y)
-
       self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
-      # self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      # self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
       # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
-
-
-      self.loss_train_tensor.append(loss.detach())
-      self.accuracy_train_tensor.append(accuracy.detach())
-      self.auroc_train_tensor.append(auroc.detach())
-
+      
       return loss
 
 
     def training_epoch_end(self, training_step_outputs): 
       
-      #Almacenar los tensores en una lista
-      loss_tensor = torch.tensor(self.loss_train_tensor)
-      accuracy_tensor = torch.tensor(self.accuracy_train_tensor)
-      auroc_tensor = torch.tensor(self.auroc_train_tensor)
-
-      # Calcular la media de los tensores
-      avg_loss = loss_tensor.mean()
-      avg_accuracy = accuracy_tensor.mean()
-      avg_auroc = auroc_tensor.mean()
-      
-      #Agregar los valores medios a las listas
-      self.loss_train_list.append(avg_loss.item())  
-      self.accuracy_train_list.append(avg_accuracy.item()) 
-      self.auroc_train_list.append(avg_auroc.item())  
-
-      #Vaciar las listas para la próxima época
-      self.loss_train_tensor = []
-      self.accuracy_train_tensor = []
-      self.auroc_train_tensor = []
-
-      
-      #self.log("step",self.current_epoch)
+      self.accuracy.reset()
+      self.auc.reset()
+    
+      self.log("step",self.current_epoch)
 
 
     def validation_step(self, batch, batch_idx):
@@ -307,42 +264,18 @@ class SegmentationModel(pl.LightningModule):
       loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
 
       self.log("train_val_loss", loss, prog_bar=True,on_epoch=True,on_step=False)
-      # self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True)
-      # self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True)
+      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
       #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
-      accuracy_val = self.accuracy(logits, y)
-      auroc_val = self.auc(yhat, y)
-      
-      self.loss_val_tensor.append(loss.detach())
-      self.accuracy_val_tensor.append(accuracy_val.detach())
-      self.auroc_val_tensor.append(auroc_val.detach())
-      
       return loss
 
     def validation_epoch_end(self, validation_step_outputs):
       
-      #Almacenar los tensores en una lista
-      loss_val_tensor = torch.tensor(self.loss_val_tensor)
-      accuracy_val_tensor = torch.tensor(self.accuracy_val_tensor)
-      auroc_val_tensor = torch.tensor(self.auroc_val_tensor)
+      self.accuracy.reset()
+      self.auc.reset()
       
-      #Calcular la media de los tensores
-      avg_loss_val = loss_val_tensor.mean()
-      avg_accuracy_val = accuracy_val_tensor.mean()
-      avg_auroc_val = auroc_val_tensor.mean()
-      
-      #Agregar los valores medios a las listas
-      self.loss_val_list.append(avg_loss_val.item())
-      self.accuracy_val_list.append(avg_accuracy_val.item())
-      self.auroc_val_list.append(avg_auroc_val.item())
-      
-      #Vaciar las listas para la próxima época
-      self.loss_val_tensor = []
-      self.accuracy_val_tensor = []
-      self.auroc_val_tensor = []
-
-      #self.log("step",self.current_epoch)
+      self.log("step",self.current_epoch)
       
 
     def configure_optimizers(self):
@@ -374,9 +307,9 @@ if __name__ == '__main__':
     from pytorch_lightning import loggers as pl_loggers
 
     config = {
-        "batch_size":2,
+        "batch_size":4,
         "img_size":512,
-        "num_workers":2,
+        "num_workers":4,
         "lr":1e-3,
     }
 
