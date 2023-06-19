@@ -249,11 +249,11 @@ class SegmentationModel(pl.LightningModule):
 
 
     def training_epoch_end(self, training_step_outputs): 
+        
+        self.accuracy.reset()
+        self.auc.reset()
       
-      self.accuracy.reset()
-      self.auc.reset()
-    
-      self.log("step",self.current_epoch)
+        self.log("step",self.current_epoch)
 
 
     def validation_step(self, batch, batch_idx):
