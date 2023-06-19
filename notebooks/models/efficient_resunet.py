@@ -233,19 +233,19 @@ class SegmentationModel(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-      x, y = batch
-      logits = self(x)
-      yhat = torch.sigmoid(logits)
-      loss = F.binary_cross_entropy(yhat, y)
-      loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
+        x, y = batch
+        logits = self(x)
+        yhat = torch.sigmoid(logits)
+        loss = F.binary_cross_entropy(yhat, y)
+        loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
 
-      self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
-      # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
-      
-      return loss
+        self.log("train_loss_step", loss, prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_acc_step", self.accuracy(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_auroc_step", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        #self.log("train_recall_step",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y),on_epoch=True,on_step=False)
+        # self.log("train_recall_step",self.recall(torch.argmax(yhat,dim=1),y),on_epoch=True,on_step=False)
+        
+        return loss
 
 
     def training_epoch_end(self, training_step_outputs): 
@@ -257,41 +257,42 @@ class SegmentationModel(pl.LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-      x,y = batch
-      logits = self(x)
-      yhat = torch.sigmoid(logits)
-      loss = F.binary_cross_entropy(yhat, y)
-      loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
+        x,y = batch
+        logits = self(x)
+        yhat = torch.sigmoid(logits)
+        loss = F.binary_cross_entropy(yhat, y)
+        loss += self.dice_coeff(yhat.squeeze(1),y.squeeze(1))
 
-      self.log("train_val_loss", loss, prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
-      self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
-      #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
+        self.log("train_val_loss", loss, prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_val_acc", self.accuracy(logits, y),prog_bar=True,on_epoch=True,on_step=False)
+        self.log("train_val_auroc", self.auc(yhat, y),prog_bar=True,on_epoch=True,on_step=False)
+        #self.log("train_val_recall",self.recall(torch.round(yhat* torch.pow(10, torch.tensor(2))) / torch.pow(10, torch.tensor(2)),y))
 
-      return loss
+        return loss
 
     def validation_epoch_end(self, validation_step_outputs):
-      
-      self.accuracy.reset()
-      self.auc.reset()
-      
-      self.log("step",self.current_epoch)
-      
+        
+        self.accuracy.reset()
+        self.auc.reset()
+        
+        self.log("step",self.current_epoch)
+        
 
     def configure_optimizers(self):
-      optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
-      return optimizer
+        optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
+        return optimizer
+      
 
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
-    # Average of Dice coefficient for all batches, or for a single mask
-      sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1, -2, -3)
+      # Average of Dice coefficient for all batches, or for a single mask
+        sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1, -2, -3)
 
-      inter = 2 * (input * target).sum(dim=sum_dim)
-      sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim)
-      sets_sum = torch.where(sets_sum == 0, inter, sets_sum)
+        inter = 2 * (input * target).sum(dim=sum_dim)
+        sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim)
+        sets_sum = torch.where(sets_sum == 0, inter, sets_sum)
 
-      dice = (inter + epsilon) / (sets_sum + epsilon)
-      return dice.mean()
+        dice = (inter + epsilon) / (sets_sum + epsilon)
+        return dice.mean()
 
 
 if __name__ == '__main__':
@@ -335,7 +336,7 @@ if __name__ == '__main__':
         accelerator="gpu",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=1000,
-        min_epochs=10,
+        min_epochs=20,
         logger=pl_loggers.TensorBoardLogger("../logs/lightning_logs/efficient_resunet"),
         callbacks=[TQDMProgressBar(),
                    EarlyStopping(monitor="train_val_loss",mode="min",patience=3),
