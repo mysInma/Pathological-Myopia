@@ -80,20 +80,25 @@ class VGG19TF(nn.Module):
         
         
         #Capa FC por arriba
-        self.fc1_1 = nn.Linear(25088, 512)
+        self.fc1_1 = nn.Linear(25088, 25088)
         self.relu_fc1_1 = nn.ReLU()
-        self.fc1_2 = nn.Linear(512, 512)
+        self.fc1_2 = nn.Linear(25088, 12544)
         self.relu_fc1_2 = nn.ReLU()
-        self.fc1_3 = nn.Linear(512,2)
+        self.fc1_3 = nn.Linear(12544,4096)
         self.relu_fc1_3 = nn.ReLU()
         
+        
         #Capa FC por abajo
-        self.fc2_1 = nn.Linear(100352, 512)
+        self.fc2_1 = nn.Linear(100352, 100352)
         self.relu_fc2_1 = nn.ReLU()
-        self.fc2_2 = nn.Linear(512, 512)
+        self.fc2_2 = nn.Linear(100352, 50176)
         self.relu_fc2_2 = nn.ReLU()
-        self.fc2_3 = nn.Linear(512,2)
+        self.fc2_3 = nn.Linear(50176,4096)
         self.relu_fc2_3 = nn.ReLU()
+        
+        
+        self.final_fc = nn.Linear(8192,2)
+        self.relu_final_fc = nn.ReLU()
         
         
     def init_input_layer(self,img_size=896):
@@ -157,11 +162,9 @@ class VGG19TF(nn.Module):
         conv_21_4 = self.conv_21_4(intermediate_outputs['b1_35'])
         relu_21_4 = self.relu_21_4(conv_21_4)
         
-        
         sum1 = relu_11_1 + relu_11_2 + relu_11_3 + relu_11_4 + relu_21_1 + relu_21_2 + relu_21_3 + relu_21_4
         
-        
-         #Bloque 1 por abajo
+        #Bloque 1 por abajo
         conv_12_1 = self.conv_12_1(intermediate_outputs['b1_20'])
         relu_12_1 = self.relu_12_1(conv_12_1)
         
@@ -192,13 +195,11 @@ class VGG19TF(nn.Module):
         unsample_22_4 = self.unsample_22_4(conv_22_4)
         relu_22_4 = self.relu_22_4(unsample_22_4)
         
-   
         sum2 = relu_12_1 + relu_12_2 + relu_12_3 + relu_12_4 + relu_22_1 + relu_22_2 + relu_22_3 + relu_22_4 
-        
         
         #En forma de vector unidimensional
         sum1_1 = sum1.flatten(start_dim=1)
-        sum2_2 = sum2.flatten(start_dim=1)
+        sum2_2 = sum1.flatten(start_dim=1)
         
         fc1_1 = self.fc1_1(sum1_1)
         relu_fc1_1 = self.relu_fc1_1(fc1_1)
@@ -216,7 +217,8 @@ class VGG19TF(nn.Module):
         relu_fc2_3 = self.relu_fc2_3(fc2_3)
 
         
-        output = relu_fc1_3 + relu_fc2_3
+        output = torch.cat([relu_fc1_3,relu_fc2_3],dim=1)
+        output = self.relu_final_fc(output)
         
         return output
     
@@ -249,8 +251,8 @@ class VGGModel(pl.LightningModule):
         
         return mean
     
-    # def training_epoch_end(self, training_step_outputs):
-    #     self.log("step",self.current_epoch)
+    def training_epoch_end(self, training_step_outputs):
+        self.log("step",self.current_epoch)
         
         
     def validation_step(self, batch, batch_idx):
@@ -270,12 +272,8 @@ class VGGModel(pl.LightningModule):
         # return mean
   
   
-    # def validation_epoch_end(self, validation_step_outputs):
-    #     self.lista[self.current_epoch+1] = []
-        # self.log("step",self.current_epoch)
-        # step = torch.tensor(self.current_epoch, dtype=torch.float32)
-        # self.log("step", step.item())
-    
+    def validation_epoch_end(self, validation_step_outputs):
+        self.log("step",self.current_epoch)
         
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
@@ -336,4 +334,3 @@ if __name__ == '__main__':
 
     miopia_model = VGGModel(config)
     trainer.fit(miopia_model, train_loader,val_loader)
-    print("pepe")
