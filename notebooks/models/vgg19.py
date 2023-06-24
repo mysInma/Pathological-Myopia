@@ -269,7 +269,7 @@ class VGGModel(pl.LightningModule):
         self.log("val_loss",mean)
         self.log("val_variance", variance)
         # return {"val_loss":mean,"val_variance":variance}
-        # return mean
+        return mean
   
   
     def validation_epoch_end(self, validation_step_outputs):
@@ -296,6 +296,7 @@ if __name__ == '__main__':
     from pytorch_lightning.callbacks.progress import TQDMProgressBar
     import torch
     from torch.utils.data import DataLoader
+    from pytorch_lightning import loggers as pl_loggers
     
     config = {
         "batch_size":4,
@@ -307,26 +308,26 @@ if __name__ == '__main__':
     pl.seed_everything(42,workers=True)
     
         
-    train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
+    train_features = VGGDataset("../datasets/vgg19/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
+    val_dataset = VGGDataset("../datasets/vgg19/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
     trainer = Trainer(
-        # accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
+        accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
         #deterministic=True,
         accelerator="gpu",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
-        max_epochs=8,
+        max_epochs=1000,
         callbacks=[TQDMProgressBar(),
-                #    EarlyStopping(monitor="val_loss",mode="min",patience=3),
-                   ModelCheckpoint(dirpath="./model-checkpoint-VGG19/",\
+                   EarlyStopping(monitor="val_loss",mode="min",patience=3),
+                   ModelCheckpoint(dirpath="../logs/model-checkpoints/vgg19/",\
                     filename="vgg-{epoch}-{val_loss:.2f}",
                     save_top_k=2,
                     monitor="val_loss")],
-        # log_every_n_steps=1,
+        log_every_n_steps=1,
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
