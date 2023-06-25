@@ -80,20 +80,20 @@ class VGG19TF(nn.Module):
         
         
         #Capa FC por arriba
-        self.fc1_1 = nn.Linear(25088, 25088)
+        self.fc1_1 = nn.Linear(25088, 5000)
         self.relu_fc1_1 = nn.ReLU()
-        self.fc1_2 = nn.Linear(25088, 12544)
+        self.fc1_2 = nn.Linear(5000, 5000)
         self.relu_fc1_2 = nn.ReLU()
-        self.fc1_3 = nn.Linear(12544,4096)
+        self.fc1_3 = nn.Linear(5000,4096)
         self.relu_fc1_3 = nn.ReLU()
         
         
         #Capa FC por abajo
-        self.fc2_1 = nn.Linear(100352, 100352)
+        self.fc2_1 = nn.Linear(100352, 10000)
         self.relu_fc2_1 = nn.ReLU()
-        self.fc2_2 = nn.Linear(100352, 50176)
+        self.fc2_2 = nn.Linear(10000, 5000)
         self.relu_fc2_2 = nn.ReLU()
-        self.fc2_3 = nn.Linear(50176,4096)
+        self.fc2_3 = nn.Linear(5000,4096)
         self.relu_fc2_3 = nn.ReLU()
         
         
@@ -199,7 +199,7 @@ class VGG19TF(nn.Module):
         
         #En forma de vector unidimensional
         sum1_1 = sum1.flatten(start_dim=1)
-        sum2_2 = sum1.flatten(start_dim=1)
+        sum2_2 = sum2.flatten(start_dim=1)
         
         fc1_1 = self.fc1_1(sum1_1)
         relu_fc1_1 = self.relu_fc1_1(fc1_1)
@@ -211,7 +211,7 @@ class VGG19TF(nn.Module):
         
         fc2_1 = self.fc2_1(sum2_2)
         relu_fc2_1 = self.relu_fc2_1(fc2_1)
-        fc2_2 = self.relu_fc2_2(relu_fc2_1)
+        fc2_2 = self.fc2_2(relu_fc2_1)
         relu_fc2_2 = self.relu_fc2_2(fc2_2)
         fc2_3 = self.fc2_3(relu_fc2_2)
         relu_fc2_3 = self.relu_fc2_3(fc2_3)
@@ -307,10 +307,10 @@ if __name__ == '__main__':
     pl.seed_everything(42,workers=True)
     
         
-    train_features = VGGDataset("../train_vgg/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
+    train_features = VGGDataset("../datasets/vgg19/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = VGGDataset("../train_vgg/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
+    val_dataset = VGGDataset("../datasets/vgg19/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
