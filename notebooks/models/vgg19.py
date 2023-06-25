@@ -218,6 +218,7 @@ class VGG19TF(nn.Module):
 
         
         output = torch.cat([relu_fc1_3,relu_fc2_3],dim=1)
+        output  = self.final_fc(output)
         output = self.relu_final_fc(output)
         
         return output
@@ -298,7 +299,7 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     
     config = {
-        "batch_size":4,
+        "batch_size":2,
         "img_size":896,
         "num_workers":4,
         "lr":1e-3,
