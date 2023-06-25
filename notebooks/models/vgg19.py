@@ -308,10 +308,10 @@ if __name__ == '__main__':
     pl.seed_everything(42,workers=True)
     
         
-    train_features = VGGDataset("../datasets/vgg19/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
+    train_features = VGGDataset("../datasets/vgg/VGG_train.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     train_loader = DataLoader(train_features,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=True)
     
-    val_dataset = VGGDataset("../datasets/vgg19/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
+    val_dataset = VGGDataset("../datasets/vgg/VGG_val.csv","../../train_vgg/", CustomTransformationVgg(config["img_size"]))
     val_loader = DataLoader(val_dataset,batch_size=config["batch_size"],num_workers=config["num_workers"],shuffle=False)
 
     # Initialize a trainer
