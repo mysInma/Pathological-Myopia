@@ -239,16 +239,18 @@ class VGGModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x,y = batch
         logits = self.model(x)
-        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
+        yhat = torch.sigmoid(logits)
         # y = torch.squeeze(y, dim=1)
 
+        y_normalized = y/(self.model.img_size)
+
         # Calcula la distancia euclidiana entre los tensores
-        loss = F.pairwise_distance(y,yhat)
+        loss = F.pairwise_distance(y_normalized,yhat)
         variance = torch.var(loss)
         mean = torch.mean(loss)
         
-        self.log("train_loss",mean)
-        self.log("train_variance", variance)
+        self.log("train_loss",mean,prog_bar=True, on_epoch=True, on_step=False)
+        self.log("train_variance",variance,prog_bar=True, on_epoch=True, on_step=False)
         
         return mean
     
@@ -259,16 +261,17 @@ class VGGModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x,y = batch
         logits = self.model(x)
-        yhat = torch.sigmoid(logits)* (self.model.img_size-1)
+        yhat = torch.sigmoid(logits)
         # y = torch.squeeze(y, dim=1)
+        y_normalized = y/(self.model.img_size)
 
         # Calcula la distancia euclidiana entre los tensores
-        loss = F.pairwise_distance(y,yhat)
+        loss = F.pairwise_distance(y_normalized,yhat)
         variance = torch.var(loss)
         mean = torch.mean(loss)
         
-        self.log("val_loss",mean)
-        self.log("val_variance", variance)
+        self.log("val_loss",mean,prog_bar=True, on_epoch=True, on_step=False)
+        self.log("val_variance",variance,prog_bar=True, on_epoch=True, on_step=False)
         # return {"val_loss":mean,"val_variance":variance}
         # return mean
   
@@ -299,7 +302,7 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     
     config = {
-        "batch_size":2,
+        "batch_size":8,
         "img_size":896,
         "num_workers":4,
         "lr":1e-3,
@@ -316,18 +319,18 @@ if __name__ == '__main__':
 
     # Initialize a trainer
     trainer = Trainer(
-        # accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
+        accumulate_grad_batches=32, # acumula los gradientes de los primeros 4 batches
         #deterministic=True,
         accelerator="gpu",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=8,
         callbacks=[TQDMProgressBar(),
-                #    EarlyStopping(monitor="val_loss",mode="min",patience=3),
+                   EarlyStopping(monitor="val_loss",mode="min",patience=3),
                    ModelCheckpoint(dirpath="./model-checkpoint-VGG19/",\
                     filename="vgg-{epoch}-{val_loss:.2f}",
                     save_top_k=2,
                     monitor="val_loss")],
-        # log_every_n_steps=1,
+        log_every_n_steps=1,
         # limit_train_batches=1.0, limit_val_batches=1.0
         # resume_from_checkpoint="some/path/to/my_checkpoint.ckpt"
     )
