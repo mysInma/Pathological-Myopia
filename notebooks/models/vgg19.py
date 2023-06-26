@@ -80,24 +80,24 @@ class VGG19TF(nn.Module):
         
         
         #Capa FC por arriba
-        self.fc1_1 = nn.Linear(25088, 5000)
+        self.fc1_1 = nn.Linear(25088, 3000)
         self.relu_fc1_1 = nn.ReLU()
-        self.fc1_2 = nn.Linear(5000, 5000)
+        self.fc1_2 = nn.Linear(3000, 400)
         self.relu_fc1_2 = nn.ReLU()
-        self.fc1_3 = nn.Linear(5000,4096)
+        self.fc1_3 = nn.Linear(400,100)
         self.relu_fc1_3 = nn.ReLU()
         
         
         #Capa FC por abajo
-        self.fc2_1 = nn.Linear(100352, 10000)
+        self.fc2_1 = nn.Linear(100352, 4000)
         self.relu_fc2_1 = nn.ReLU()
-        self.fc2_2 = nn.Linear(10000, 5000)
+        self.fc2_2 = nn.Linear(4000, 1000)
         self.relu_fc2_2 = nn.ReLU()
-        self.fc2_3 = nn.Linear(5000,4096)
+        self.fc2_3 = nn.Linear(1000,100)
         self.relu_fc2_3 = nn.ReLU()
         
         
-        self.final_fc = nn.Linear(8192,2)
+        self.final_fc = nn.Linear(200,2)
         self.relu_final_fc = nn.ReLU()
         
         
